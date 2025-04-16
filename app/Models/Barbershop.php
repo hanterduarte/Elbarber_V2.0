@@ -4,22 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Barbershop extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
         'address',
-        'created_at'
+        'phone',
+        'email',
+        'cnpj',
+        'logo',
+        'is_active'
     ];
 
-    protected $dates = [
-        'created_at',
-        'updated_at'
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
+    /**
+     * Get the barbers that belong to the barbershop.
+     */
     public function barbers()
     {
         return $this->hasMany(Barber::class);

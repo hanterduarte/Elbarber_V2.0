@@ -85,7 +85,7 @@ Route::middleware(['auth'])->group(function () {
     // Métodos de Pagamento
     Route::resource('payment-methods', PaymentMethodController::class);
     
-    // Caixa
+    // Rotas do Caixa
     Route::prefix('cash-register')->name('cash-register.')->group(function () {
         Route::get('/', [CashRegisterController::class, 'index'])->name('index');
         Route::post('/open', [CashRegisterController::class, 'open'])->name('open');

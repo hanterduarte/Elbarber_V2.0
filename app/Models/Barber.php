@@ -12,6 +12,7 @@ class Barber extends Model
 
     protected $fillable = [
         'user_id',
+        'barbershop_id',
         'name',
         'email',
         'phone',
@@ -27,6 +28,11 @@ class Barber extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function barbershop()
+    {
+        return $this->belongsTo(Barbershop::class);
     }
 
     public function appointments()

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'ELbarber') }}</title>
+    <title>{{ config('app.name', 'El Barber') }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -42,74 +42,71 @@
                         <div class="position-sticky pt-3">
                             <ul class="nav flex-column">
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                                    <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')" class="text-white">
                                         <i class="fas fa-home"></i> Dashboard
-                                    </a>
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('appointments.*') ? 'active' : '' }}" href="{{ route('appointments.index') }}">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        <span>Agendamentos</span>
-                                    </a>
+                                    <x-nav-link href="{{ route('appointments.index') }}" :active="request()->routeIs('appointments.*')" class="text-white">
+                                        <i class="fas fa-calendar-alt"></i> Agendamentos
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('clients.*') ? 'active' : '' }}" href="{{ route('clients.index') }}">
+                                    <x-nav-link href="{{ route('clients.index') }}" :active="request()->routeIs('clients.*')" class="text-white">
                                         <i class="fas fa-users"></i> Clientes
-                                    </a>
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('services.*') ? 'active' : '' }}" href="{{ route('services.index') }}">
+                                    <x-nav-link href="{{ route('services.index') }}" :active="request()->routeIs('services.*')" class="text-white">
                                         <i class="fas fa-cut"></i> Serviços
-                                    </a>
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">
+                                    <x-nav-link href="{{ route('products.index') }}" :active="request()->routeIs('products.*')" class="text-white">
                                         <i class="fas fa-box"></i> Produtos
-                                    </a>
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('pos.*') ? 'active' : '' }}" href="{{ route('pos.index') }}">
-                                        <i class="fas fa-cash-register"></i>
-                                        <span>PDV</span>
-                                    </a>
+                                    <x-nav-link href="{{ route('pos.index') }}" :active="request()->routeIs('pos.*')" class="text-white">
+                                        <i class="fas fa-cash-register"></i> PDV
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('payment-methods.*') ? 'active' : '' }}" href="{{ route('payment-methods.index') }}">
-                                        <i class="fas fa-credit-card"></i>
-                                        <span>Métodos de Pagamento</span>
-                                    </a>
+                                    <x-nav-link href="{{ route('payment-methods.index') }}" :active="request()->routeIs('payment-methods.*')" class="text-white">
+                                        <i class="fas fa-credit-card"></i> Métodos de Pagamento
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('cash-register.*') ? 'active' : '' }}" href="{{ route('cash-register.index') }}">
+                                    <x-nav-link href="{{ route('cash-register.index') }}" :active="request()->routeIs('cash-register.*')" class="text-white">
                                         <i class="fas fa-cash-register"></i> Caixa
-                                    </a>
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.services') }}">
+                                    <x-nav-link href="{{ route('reports.services') }}" :active="request()->routeIs('reports.*')" class="text-white">
                                         <i class="fas fa-chart-bar"></i> Relatórios
-                                    </a>
+                                    </x-nav-link>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white {{ request()->routeIs('barbers.*') ? 'active' : '' }}" href="{{ route('barbers.index') }}">
+                                    <x-nav-link href="{{ route('barbers.index') }}" :active="request()->routeIs('barbers.*')" class="text-white">
                                         <i class="fas fa-cut"></i> Barbeiros
-                                    </a>
+                                    </x-nav-link>
                                 </li>
                                 @auth
                                     @if(auth()->user()->hasRole('admin'))
                                     <li class="nav-item">
-                                        <a class="nav-link text-white {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">
+                                        <x-nav-link href="{{ route('users.index') }}" :active="request()->routeIs('users.*')" class="text-white">
                                             <i class="fas fa-user-cog"></i> Usuários
-                                        </a>
+                                        </x-nav-link>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link text-white {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}">
+                                        <x-nav-link href="{{ route('roles.index') }}" :active="request()->routeIs('roles.*')" class="text-white">
                                             <i class="fas fa-user-tag"></i> Funções
-                                        </a>
+                                        </x-nav-link>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link text-white {{ request()->routeIs('permissions.*') ? 'active' : '' }}" href="{{ route('permissions.index') }}">
+                                        <x-nav-link href="{{ route('permissions.index') }}" :active="request()->routeIs('permissions.*')" class="text-white">
                                             <i class="fas fa-key"></i> Permissões
-                                        </a>
+                                        </x-nav-link>
                                     </li>
                                     @endif
                                 @endauth
