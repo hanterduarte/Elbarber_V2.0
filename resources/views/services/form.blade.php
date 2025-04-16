@@ -8,6 +8,18 @@
                 <div class="card-header">{{ isset($service) ? __('Editar Serviço') : __('Novo Serviço') }}</div>
 
                 <div class="card-body">
+                    @if(session('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     <form method="POST" action="{{ isset($service) ? route('services.update', $service) : route('services.store') }}">
                         @csrf
                         @if(isset($service))
@@ -73,7 +85,7 @@
                         <div class="form-group row">
                             <div class="col-md-6 offset-md-4">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ old('is_active', $service->is_active ?? true) ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $service->is_active ?? true) ? 'checked' : '' }}>
 
                                     <label class="form-check-label" for="is_active">
                                         {{ __('Ativo') }}

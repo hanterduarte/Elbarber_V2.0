@@ -100,10 +100,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             UserSeeder::class,
+            BarbershopSeeder::class,
             ServiceSeeder::class,
             ProductSeeder::class,
             BarberSeeder::class,
-            PaymentMethodSeeder::class,
+            CashRegisterMovementSeeder::class
         ]);
     }
 } 

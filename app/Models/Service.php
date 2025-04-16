@@ -14,13 +14,13 @@ class Service extends Model
         'description',
         'price',
         'duration',
-        'status'
+        'is_active'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'duration' => 'integer',
-        'status' => 'boolean'
+        'is_active' => 'boolean'
     ];
 
     public function appointments()

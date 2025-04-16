@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('cash_registers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->decimal('opening_balance', 10, 2)->default(0);
+            $table->foreignId('barber_id')->nullable()->constrained()->onDelete('cascade');
+            $table->decimal('opening_balance', 10, 2);
             $table->decimal('closing_balance', 10, 2)->nullable();
             $table->decimal('total_sales', 10, 2)->default(0);
             $table->decimal('total_withdrawals', 10, 2)->default(0);
@@ -21,7 +22,6 @@ return new class extends Migration
             $table->timestamp('closed_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-            $table->softDeletes();
         });
     }
 

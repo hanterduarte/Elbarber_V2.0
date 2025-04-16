@@ -13,23 +13,21 @@ class Appointment extends Model
     protected $fillable = [
         'barber_id',
         'client_id',
-        'start_time',
-        'end_time',
+        'date',
+        'time',
         'status',
         'notes'
     ];
 
     protected $dates = [
-        'start_time',
-        'end_time',
+        'date',
         'created_at',
         'updated_at',
         'deleted_at'
     ];
 
     protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
+        'date' => 'date',
         'status' => 'string'
     ];
 
@@ -43,13 +41,8 @@ class Appointment extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function service()
-    {
-        return $this->belongsTo(Service::class);
-    }
-
     public function services()
     {
-        return $this->belongsToMany(Service::class);
+        return $this->belongsToMany(Service::class, 'appointment_service');
     }
 } 

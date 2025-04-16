@@ -24,7 +24,7 @@ O Elbarber é um sistema de gerenciamento completo para barbearias, desenvolvido
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/elbarber.git
+git clone https://github.com/seu-usuario/Elbarber_V2.0.git
 cd elbarber
 ```
 
@@ -67,17 +67,7 @@ php artisan key:generate
 php artisan migrate:fresh --seed
 ```
 
-8. Instale as dependências do Node.js:
-```bash
-npm install
-```
-
-9. Compile os assets:
-```bash
-npm run dev
-```
-
-10. Inicie o servidor de desenvolvimento:
+8. Inicie o servidor de desenvolvimento:
 ```bash
 php artisan serve
 ```
