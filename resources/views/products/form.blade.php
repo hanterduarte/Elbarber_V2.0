@@ -22,7 +22,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="name" class="form-label">Nome do Produto</label>
+                            <label for="name" class="form-label">Nome do Produto <span class="text-danger">*</span></label>
                             <input type="text" 
                                    class="form-control @error('name') is-invalid @enderror" 
                                    id="name" 
@@ -46,7 +46,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="price" class="form-label">Preço</label>
+                            <label for="price" class="form-label">Preço <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
                                 <input type="text" 
@@ -69,8 +69,7 @@
                                        class="form-control @error('cost') is-invalid @enderror" 
                                        id="cost" 
                                        name="cost" 
-                                       value="{{ old('cost', isset($product) ? number_format($product->cost, 2, ',', '.') : '') }}" 
-                                       required>
+                                       value="{{ old('cost', isset($product) ? number_format($product->cost, 2, ',', '.') : '') }}">
                             </div>
                             @error('cost')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -99,8 +98,7 @@
                                    class="form-control @error('min_stock') is-invalid @enderror" 
                                    id="min_stock" 
                                    name="min_stock" 
-                                   value="{{ old('min_stock', $product->min_stock ?? 1) }}" 
-                                   required 
+                                   value="{{ old('min_stock', $product->min_stock ?? 0) }}" 
                                    min="0">
                             @error('min_stock')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -128,19 +126,17 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select @error('status') is-invalid @enderror" 
-                                    id="status" 
-                                    name="status" 
-                                    required>
-                                <option value="active" {{ (old('status', $product->status ?? '') === 'active') ? 'selected' : '' }}>
-                                    Ativo
-                                </option>
-                                <option value="inactive" {{ (old('status', $product->status ?? '') === 'inactive') ? 'selected' : '' }}>
-                                    Inativo
-                                </option>
-                            </select>
-                            @error('status')
+                            <div class="form-check form-switch">
+                                <input type="hidden" name="is_active" value="0">
+                                <input type="checkbox" 
+                                       class="form-check-input" 
+                                       id="is_active" 
+                                       name="is_active" 
+                                       value="1" 
+                                       {{ old('is_active', $product->is_active ?? true) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="is_active">Produto Ativo</label>
+                            </div>
+                            @error('is_active')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -175,8 +171,24 @@
         const priceInput = document.getElementById('price');
         const costInput = document.getElementById('cost');
         
-        formatMoney(priceInput);
-        formatMoney(costInput);
+        if (priceInput) formatMoney(priceInput);
+        if (costInput) formatMoney(costInput);
+
+        // Adiciona listener para o formulário
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Converte os valores monetários para o formato correto antes do envio
+            const price = priceInput ? priceInput.value.replace(/\./g, '').replace(',', '.') : '';
+            const cost = costInput ? costInput.value.replace(/\./g, '').replace(',', '.') : '';
+            
+            if (priceInput) priceInput.value = price;
+            if (costInput) costInput.value = cost;
+            
+            // Envia o formulário
+            this.submit();
+        });
     });
 </script>
 @endsection 

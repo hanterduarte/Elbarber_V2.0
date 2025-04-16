@@ -67,8 +67,8 @@
                                 </td>
                                 <td>{{ $product->min_stock }}</td>
                                 <td>
-                                    <span class="badge {{ $product->status === 'active' ? 'bg-success' : 'bg-danger' }}">
-                                        {{ $product->status === 'active' ? 'Ativo' : 'Inativo' }}
+                                    <span class="badge {{ $product->is_active ? 'bg-success' : 'bg-danger' }}">
+                                        {{ $product->is_active ? 'Ativo' : 'Inativo' }}
                                     </span>
                                 </td>
                                 <td>

@@ -13,14 +13,16 @@ class Product extends Model
         'name',
         'description',
         'price',
+        'cost',
         'stock',
-        'created_at',
-        'status'
+        'min_stock',
+        'is_active'
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'status' => 'boolean'
+        'price' => 'float',
+        'cost' => 'float',
+        'is_active' => 'boolean'
     ];
 
     protected $dates = [

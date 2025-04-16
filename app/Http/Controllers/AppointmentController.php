@@ -26,29 +26,33 @@ class AppointmentController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'barber_id' => 'required|exists:barbers,id',
-            'client_id' => 'required|exists:clients,id',
-            'date' => 'required|date',
-            'time' => 'required',
-            'services' => 'required|array',
-            'services.*' => 'exists:services,id',
-            'notes' => 'nullable|string',
-        ]);
+        try {
+            $validated = $request->validate([
+                'barber_id' => 'required|exists:barbers,id',
+                'client_id' => 'required|exists:clients,id',
+                'date' => 'required|date',
+                'services' => 'required|array|min:1',
+                'services.*' => 'exists:services,id',
+                'notes' => 'nullable|string',
+            ]);
 
-        $appointment = Appointment::create([
-            'barber_id' => $validated['barber_id'],
-            'client_id' => $validated['client_id'],
-            'date' => $validated['date'],
-            'time' => $validated['time'],
-            'notes' => $validated['notes'],
-            'status' => 'scheduled',
-        ]);
+            $appointment = Appointment::create([
+                'barber_id' => $validated['barber_id'],
+                'client_id' => $validated['client_id'],
+                'date' => $validated['date'],
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'scheduled',
+            ]);
 
-        $appointment->services()->attach($validated['services']);
+            $appointment->services()->attach($validated['services']);
 
-        return redirect()->route('appointments.index')
-            ->with('success', 'Agendamento criado com sucesso!');
+            return redirect()->route('appointments.index')
+                ->with('success', 'Agendamento criado com sucesso!');
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Erro ao criar agendamento. Por favor, tente novamente.');
+        }
     }
 
     public function edit(Appointment $appointment)
@@ -61,30 +65,34 @@ class AppointmentController extends Controller
 
     public function update(Request $request, Appointment $appointment)
     {
-        $validated = $request->validate([
-            'barber_id' => 'required|exists:barbers,id',
-            'client_id' => 'required|exists:clients,id',
-            'date' => 'required|date',
-            'time' => 'required',
-            'services' => 'required|array',
-            'services.*' => 'exists:services,id',
-            'notes' => 'nullable|string',
-            'status' => 'required|in:scheduled,completed,cancelled',
-        ]);
+        try {
+            $validated = $request->validate([
+                'barber_id' => 'required|exists:barbers,id',
+                'client_id' => 'required|exists:clients,id',
+                'date' => 'required|date',
+                'services' => 'required|array|min:1',
+                'services.*' => 'exists:services,id',
+                'notes' => 'nullable|string',
+                'status' => 'required|in:scheduled,completed,cancelled',
+            ]);
 
-        $appointment->update([
-            'barber_id' => $validated['barber_id'],
-            'client_id' => $validated['client_id'],
-            'date' => $validated['date'],
-            'time' => $validated['time'],
-            'notes' => $validated['notes'],
-            'status' => $validated['status'],
-        ]);
+            $appointment->update([
+                'barber_id' => $validated['barber_id'],
+                'client_id' => $validated['client_id'],
+                'date' => $validated['date'],
+                'notes' => $validated['notes'] ?? null,
+                'status' => $validated['status'],
+            ]);
 
-        $appointment->services()->sync($validated['services']);
+            $appointment->services()->sync($validated['services']);
 
-        return redirect()->route('appointments.index')
-            ->with('success', 'Agendamento atualizado com sucesso!');
+            return redirect()->route('appointments.index')
+                ->with('success', 'Agendamento atualizado com sucesso!');
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Erro ao atualizar agendamento. Por favor, tente novamente.');
+        }
     }
 
     public function destroy(Appointment $appointment)

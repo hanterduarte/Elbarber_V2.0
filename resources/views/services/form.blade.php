@@ -27,7 +27,7 @@
                         @endif
 
                         <div class="form-group row">
-                            <label for="name" class="col-md-4 col-form-label text-md-right">{{ __('Nome') }}</label>
+                            <label for="name" class="col-md-4 col-form-label text-md-right">{{ __('Nome') }} <span class="text-danger">*</span></label>
 
                             <div class="col-md-6">
                                 <input id="name" type="text" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name', $service->name ?? '') }}" required autocomplete="name" autofocus>
@@ -55,10 +55,13 @@
                         </div>
 
                         <div class="form-group row">
-                            <label for="price" class="col-md-4 col-form-label text-md-right">{{ __('Preço') }}</label>
+                            <label for="price" class="col-md-4 col-form-label text-md-right">{{ __('Preço') }} <span class="text-danger">*</span></label>
 
                             <div class="col-md-6">
-                                <input id="price" type="number" step="0.01" class="form-control @error('price') is-invalid @enderror" name="price" value="{{ old('price', $service->price ?? '') }}" required>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input id="price" type="number" step="0.01" class="form-control @error('price') is-invalid @enderror" name="price" value="{{ old('price', $service->price ?? '') }}" required>
+                                </div>
 
                                 @error('price')
                                     <span class="invalid-feedback" role="alert">
@@ -69,7 +72,7 @@
                         </div>
 
                         <div class="form-group row">
-                            <label for="duration" class="col-md-4 col-form-label text-md-right">{{ __('Duração (minutos)') }}</label>
+                            <label for="duration" class="col-md-4 col-form-label text-md-right">{{ __('Duração (minutos)') }} <span class="text-danger">*</span></label>
 
                             <div class="col-md-6">
                                 <input id="duration" type="number" class="form-control @error('duration') is-invalid @enderror" name="duration" value="{{ old('duration', $service->duration ?? '') }}" required>
@@ -98,7 +101,7 @@
                         <div class="form-group row mb-0">
                             <div class="col-md-6 offset-md-4">
                                 <button type="submit" class="btn btn-primary">
-                                    {{ isset($service) ? __('Atualizar') : __('Cadastrar') }}
+                                    {{ isset($service) ? __('Atualizar') : __('Salvar') }}
                                 </button>
                                 <a href="{{ route('services.index') }}" class="btn btn-secondary">
                                     {{ __('Cancelar') }}

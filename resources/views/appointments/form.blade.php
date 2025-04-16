@@ -19,7 +19,7 @@
                         @csrf
 
                         <div class="mb-3">
-                            <label for="client_id" class="form-label">Cliente</label>
+                            <label for="client_id" class="form-label">Cliente <span class="text-danger">*</span></label>
                             <select class="form-select @error('client_id') is-invalid @enderror" 
                                     id="client_id" 
                                     name="client_id" 
@@ -40,7 +40,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="barber_id" class="form-label">Barbeiro</label>
+                            <label for="barber_id" class="form-label">Barbeiro <span class="text-danger">*</span></label>
                             <select class="form-select @error('barber_id') is-invalid @enderror" 
                                     id="barber_id" 
                                     name="barber_id" 
@@ -61,7 +61,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="date" class="form-label">Data e Hora</label>
+                            <label for="date" class="form-label">Data e Hora <span class="text-danger">*</span></label>
                             <input type="datetime-local" 
                                    class="form-control @error('date') is-invalid @enderror" 
                                    id="date" 
@@ -76,7 +76,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Serviços</label>
+                            <label class="form-label">Serviços <span class="text-danger">*</span></label>
                             <div class="row">
                                 @foreach($services as $service)
                                     <div class="col-md-6">

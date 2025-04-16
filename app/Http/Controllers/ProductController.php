@@ -7,12 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use App\Models\CashRegister;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::orderBy('name')->paginate(10);
+        $products = Product::paginate(10);
         return view('products.index', compact('products'));
     }
 
@@ -23,26 +24,52 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'nullable',
-            'price' => 'required|numeric|min:0',
-            'cost' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'min_stock' => 'required|integer|min:0',
-            'image' => 'nullable|image|max:2048',
-            'status' => 'required|in:active,inactive'
-        ]);
+        try {
+            Log::info('Tentando criar novo produto', ['data' => $request->all()]);
 
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
-            $validated['image'] = $path;
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'price' => 'required|numeric|min:0',
+                'cost' => 'nullable|numeric|min:0',
+                'stock' => 'nullable|integer|min:0',
+                'min_stock' => 'nullable|integer|min:0',
+                'is_active' => 'boolean'
+            ]);
+
+            // Converter valores monetários para float
+            $validated['price'] = (float) str_replace(['.', ','], ['', '.'], $validated['price']);
+            $validated['cost'] = isset($validated['cost']) ? (float) str_replace(['.', ','], ['', '.'], $validated['cost']) : 0;
+
+            $product = Product::create([
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'price' => $validated['price'],
+                'cost' => $validated['cost'],
+                'stock' => $validated['stock'] ?? 0,
+                'min_stock' => $validated['min_stock'] ?? 0,
+                'is_active' => $request->boolean('is_active')
+            ]);
+
+            Log::info('Produto criado com sucesso', ['product' => $product]);
+
+            return redirect()->route('products.index')
+                ->with('success', 'Produto criado com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao criar produto', [
+                'error' => $e->getMessage(),
+                'data' => $request->all()
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Erro ao criar produto. Por favor, tente novamente.');
         }
+    }
 
-        Product::create($validated);
-
-        return redirect()->route('products.index')
-            ->with('success', 'Produto cadastrado com sucesso!');
+    public function show(Product $product)
+    {
+        return view('products.show', compact('product'));
     }
 
     public function edit(Product $product)
@@ -52,42 +79,73 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        $validated = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'nullable',
-            'price' => 'required|numeric|min:0',
-            'cost' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'min_stock' => 'required|integer|min:0',
-            'image' => 'nullable|image|max:2048',
-            'status' => 'required|in:active,inactive'
-        ]);
+        try {
+            Log::info('Tentando atualizar produto', [
+                'product_id' => $product->id,
+                'data' => $request->all()
+            ]);
 
-        if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $path = $request->file('image')->store('products', 'public');
-            $validated['image'] = $path;
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'price' => 'required|numeric|min:0',
+                'cost' => 'nullable|numeric|min:0',
+                'stock' => 'nullable|integer|min:0',
+                'min_stock' => 'nullable|integer|min:0',
+                'is_active' => 'boolean'
+            ]);
+
+            // Converter valores monetários para float
+            $validated['price'] = (float) str_replace(['.', ','], ['', '.'], $validated['price']);
+            $validated['cost'] = isset($validated['cost']) ? (float) str_replace(['.', ','], ['', '.'], $validated['cost']) : 0;
+
+            $product->update([
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'price' => $validated['price'],
+                'cost' => $validated['cost'],
+                'stock' => $validated['stock'] ?? 0,
+                'min_stock' => $validated['min_stock'] ?? 0,
+                'is_active' => $request->boolean('is_active')
+            ]);
+
+            Log::info('Produto atualizado com sucesso', ['product' => $product]);
+
+            return redirect()->route('products.index')
+                ->with('success', 'Produto atualizado com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar produto', [
+                'error' => $e->getMessage(),
+                'product_id' => $product->id,
+                'data' => $request->all()
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Erro ao atualizar produto. Por favor, tente novamente.');
         }
-
-        $product->update($validated);
-
-        return redirect()->route('products.index')
-            ->with('success', 'Produto atualizado com sucesso!');
     }
 
     public function destroy(Product $product)
     {
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
-        
-        $product->delete();
+        try {
+            Log::info('Tentando excluir produto', ['product_id' => $product->id]);
 
-        return redirect()->route('products.index')
-            ->with('success', 'Produto excluído com sucesso!');
+            $product->delete();
+
+            Log::info('Produto excluído com sucesso', ['product_id' => $product->id]);
+
+            return redirect()->route('products.index')
+                ->with('success', 'Produto excluído com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao excluir produto', [
+                'error' => $e->getMessage(),
+                'product_id' => $product->id
+            ]);
+
+            return back()
+                ->with('error', 'Erro ao excluir produto. Por favor, tente novamente.');
+        }
     }
 
     public function updateStock(Request $request, Product $product)
