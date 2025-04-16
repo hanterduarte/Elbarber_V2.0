@@ -37,7 +37,7 @@
                                         <td>R$ {{ number_format($service->price, 2, ',', '.') }}</td>
                                         <td>{{ $service->duration }} min</td>
                                         <td>
-                                            <span class="badge badge-{{ $service->is_active ? 'success' : 'danger' }}">
+                                            <span class="badge bg-{{ $service->is_active ? 'success' : 'danger' }}">
                                                 {{ $service->is_active ? __('Ativo') : __('Inativo') }}
                                             </span>
                                         </td>

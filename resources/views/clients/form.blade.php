@@ -10,16 +10,26 @@
                 </div>
 
                 <div class="card-body">
-                    @if (isset($client))
-                        <form action="{{ route('clients.update', $client) }}" method="POST">
-                        @method('PUT')
-                    @else
-                        <form action="{{ route('clients.store') }}" method="POST">
+                    @if(session('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
+                        </div>
                     @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ isset($client) ? route('clients.update', $client) : route('clients.store') }}">
                         @csrf
+                        @if(isset($client))
+                            @method('PUT')
+                        @endif
 
                         <div class="mb-3">
-                            <label for="name" class="form-label">Nome</label>
+                            <label for="name" class="form-label">Nome <span class="text-danger">*</span></label>
                             <input type="text" 
                                    class="form-control @error('name') is-invalid @enderror" 
                                    id="name" 
@@ -34,12 +44,13 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
                             <input type="email" 
                                    class="form-control @error('email') is-invalid @enderror" 
                                    id="email" 
                                    name="email" 
-                                   value="{{ old('email', $client->email ?? '') }}">
+                                   value="{{ old('email', $client->email ?? '') }}"
+                                   required>
                             @error('email')
                                 <div class="invalid-feedback">
                                     {{ $message }}
@@ -48,7 +59,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="phone" class="form-label">Telefone</label>
+                            <label for="phone" class="form-label">Telefone <span class="text-danger">*</span></label>
                             <input type="text" 
                                    class="form-control @error('phone') is-invalid @enderror" 
                                    id="phone" 
@@ -63,12 +74,13 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="birth_date" class="form-label">Data de Nascimento</label>
+                            <label for="birth_date" class="form-label">Data de Nascimento <span class="text-danger">*</span></label>
                             <input type="date" 
                                    class="form-control @error('birth_date') is-invalid @enderror" 
                                    id="birth_date" 
                                    name="birth_date" 
-                                   value="{{ old('birth_date', isset($client) ? $client->birth_date->format('Y-m-d') : '') }}">
+                                   value="{{ old('birth_date', isset($client) ? $client->birth_date : '') }}"
+                                   required>
                             @error('birth_date')
                                 <div class="invalid-feedback">
                                     {{ $message }}
@@ -143,6 +155,16 @@
                                     {{ $message }}
                                 </div>
                             @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="hidden" name="is_active" value="0">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $client->is_active ?? true) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="is_active">
+                                    Ativo
+                                </label>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">

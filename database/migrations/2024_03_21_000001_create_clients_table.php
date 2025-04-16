@@ -14,6 +14,12 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('phone');
             $table->date('birth_date')->nullable();
+            $table->string('address')->nullable();
+            $table->string('city')->nullable();
+            $table->string('state', 2)->nullable();
+            $table->string('zip_code', 10)->nullable();
+            $table->text('notes')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });

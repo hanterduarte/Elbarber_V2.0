@@ -16,13 +16,20 @@ class Client extends Model
         'phone',
         'birth_date',
         'is_active',
-        'created_at'
+        'city',
+        'state',
+        'zip_code',
+        'notes'
     ];
 
     protected $dates = [
         'birth_date',
         'created_at',
         'updated_at'
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean'
     ];
 
     public function appointments()
