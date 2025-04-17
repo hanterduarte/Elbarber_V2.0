@@ -138,15 +138,12 @@
                     return;
                 }
 
-                // Fechar o modal após o envio
-                const modal = this.closest('.modal');
-                const modalInstance = bootstrap.Modal.getInstance(modal);
+                // Desabilitar o botão de submit para evitar múltiplos envios
+                const submitButton = this.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
                 
+                // Enviar o formulário
                 this.submit();
-                
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
             });
         });
     });

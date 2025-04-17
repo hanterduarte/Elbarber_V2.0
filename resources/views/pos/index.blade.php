@@ -272,29 +272,77 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Adicionar itens ao formulário
-        cart.forEach((item, index) => {
-            const typeInput = document.createElement('input');
-            typeInput.type = 'hidden';
-            typeInput.name = `items[${index}][type]`;
-            typeInput.value = item.type;
-            saleForm.appendChild(typeInput);
+        // Separar produtos e serviços
+        const products = cart.filter(item => item.type === 'product').map((item, index) => ({
+            id: item.id,
+            quantity: item.quantity
+        }));
 
+        const services = cart.filter(item => item.type === 'service').map((item, index) => ({
+            id: item.id,
+            quantity: item.quantity
+        }));
+
+        // Adicionar produtos ao formulário
+        products.forEach((product, index) => {
             const idInput = document.createElement('input');
             idInput.type = 'hidden';
-            idInput.name = `items[${index}][id]`;
-            idInput.value = item.id;
+            idInput.name = `products[${index}][id]`;
+            idInput.value = product.id;
             saleForm.appendChild(idInput);
 
             const quantityInput = document.createElement('input');
             quantityInput.type = 'hidden';
-            quantityInput.name = `items[${index}][quantity]`;
-            quantityInput.value = item.quantity;
+            quantityInput.name = `products[${index}][quantity]`;
+            quantityInput.value = product.quantity;
             saleForm.appendChild(quantityInput);
         });
 
+        // Adicionar serviços ao formulário
+        services.forEach((service, index) => {
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = `services[${index}][id]`;
+            idInput.value = service.id;
+            saleForm.appendChild(idInput);
+
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'hidden';
+            quantityInput.name = `services[${index}][quantity]`;
+            quantityInput.value = service.quantity;
+            saleForm.appendChild(quantityInput);
+        });
+
+        // Desabilitar o botão de submit para evitar múltiplos envios
+        const submitButton = this.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = 'Processando...';
+
         // Enviar formulário
-        this.submit();
+        fetch(this.action, {
+            method: 'POST',
+            body: new FormData(this),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.href = data.redirect;
+            } else {
+                alert(data.message);
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Finalizar Venda';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao processar a venda. Por favor, tente novamente.');
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Finalizar Venda';
+        });
     });
 });
 </script>

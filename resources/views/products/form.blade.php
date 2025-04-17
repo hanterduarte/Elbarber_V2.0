@@ -61,12 +61,11 @@
                             <label for="price" class="form-label">Preço <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
-                                <input type="number" 
-                                       step="0.01" 
-                                       class="form-control @error('price') is-invalid @enderror" 
+                                <input type="text" 
+                                       class="form-control money @error('price') is-invalid @enderror" 
                                        id="price" 
                                        name="price" 
-                                       value="{{ old('price', $product->price ?? '') }}" 
+                                       value="{{ old('price', isset($product) ? number_format($product->price, 2, ',', '.') : '') }}" 
                                        required>
                             </div>
                             @error('price')
@@ -78,12 +77,11 @@
                             <label for="cost" class="form-label">Custo</label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
-                                <input type="number" 
-                                       step="0.01" 
-                                       class="form-control @error('cost') is-invalid @enderror" 
+                                <input type="text" 
+                                       class="form-control money @error('cost') is-invalid @enderror" 
                                        id="cost" 
                                        name="cost" 
-                                       value="{{ old('cost', $product->cost ?? '') }}">
+                                       value="{{ old('cost', isset($product) ? number_format($product->cost, 2, ',', '.') : '') }}">
                             </div>
                             @error('cost')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -130,11 +128,20 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             @if(isset($product) && $product->image)
-                                <div class="mt-2">
-                                    <img src="{{ Storage::url($product->image) }}" 
+                                <div class="mt-2" id="image-container">
+                                    <img src="{{ url('storage/products/' . basename($product->image)) }}" 
                                          alt="{{ $product->name }}" 
                                          class="img-thumbnail" 
-                                         style="max-width: 200px;">
+                                         style="max-width: 200px;"
+                                         id="product-image">
+                                    <div class="mt-1">
+                                        <input type="hidden" name="remove_image" id="remove_image" value="0">
+                                        <button type="button" 
+                                                class="btn btn-danger btn-sm" 
+                                                id="remove-image-btn">
+                                            <i class="fas fa-trash"></i> Remover imagem
+                                        </button>
+                                    </div>
                                 </div>
                             @endif
                         </div>
@@ -168,21 +175,36 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.querySelector('form');
-        const priceInput = document.getElementById('price');
-        const costInput = document.getElementById('cost');
+        const moneyInputs = document.querySelectorAll('.money');
+        const removeImageBtn = document.getElementById('remove-image-btn');
+        const imageContainer = document.getElementById('image-container');
+        const removeImageInput = document.getElementById('remove_image');
+
+        // Configurar o botão de remover imagem
+        if (removeImageBtn) {
+            removeImageBtn.addEventListener('click', function() {
+                if (imageContainer && removeImageInput) {
+                    imageContainer.style.display = 'none';
+                    removeImageInput.value = '1';
+                }
+            });
+        }
 
         // Função para formatar valor monetário
-        function formatCurrency(value) {
-            if (!value) return '';
-            
+        function formatMoney(value) {
             // Remove tudo que não é número
             value = value.replace(/\D/g, '');
             
-            // Converte para número e formata com 2 casas decimais
+            // Se não houver valor, retorna vazio
+            if (value === '') {
+                return '';
+            }
+            
+            // Converte para número com 2 casas decimais
             value = (parseFloat(value) / 100).toFixed(2);
             
             // Formata para o padrão brasileiro
@@ -192,40 +214,48 @@
         // Função para converter valor do formato brasileiro para o formato do backend
         function convertToBackendFormat(value) {
             if (!value) return '0';
+            // Remove os pontos de milhar e substitui a vírgula por ponto
             return value.replace(/\./g, '').replace(',', '.');
         }
 
         // Formata os valores monetários durante a digitação
-        if (priceInput) {
-            priceInput.addEventListener('input', function(e) {
-                e.target.value = formatCurrency(e.target.value);
-            });
-        }
+        moneyInputs.forEach(input => {
+            // Formatar valor inicial se existir
+            if (input.value) {
+                input.value = formatMoney(input.value.replace(/\D/g, ''));
+            }
 
-        if (costInput) {
-            costInput.addEventListener('input', function(e) {
-                e.target.value = formatCurrency(e.target.value);
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value === '') {
+                    e.target.value = '';
+                    return;
+                }
+                e.target.value = formatMoney(value);
             });
-        }
+        });
 
         // Trata o envio do formulário
         if (form) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
 
-                // Converte os valores para o formato do backend
-                if (priceInput) {
-                    priceInput.value = convertToBackendFormat(priceInput.value);
-                }
-                
-                if (costInput && costInput.value) {
-                    costInput.value = convertToBackendFormat(costInput.value);
-                }
+                try {
+                    // Converte os valores monetários para o formato do backend
+                    moneyInputs.forEach(input => {
+                        if (input.value) {
+                            input.value = convertToBackendFormat(input.value);
+                        }
+                    });
 
-                // Envia o formulário
-                form.submit();
+                    // Envia o formulário
+                    form.submit();
+                } catch (error) {
+                    console.error('Erro ao processar o formulário:', error);
+                    alert('Erro ao processar o formulário. Por favor, verifique os valores informados.');
+                }
             });
         }
     });
 </script>
-@endsection 
+@endpush 

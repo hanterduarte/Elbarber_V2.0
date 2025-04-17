@@ -27,20 +27,47 @@ class ProductController extends Controller
         try {
             Log::info('Tentando criar novo produto', ['data' => $request->all()]);
 
-            $validated = $request->validate([
+            // Validar os dados antes de converter os valores monetários
+            $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'cost' => 'nullable|numeric|min:0',
+                'price' => 'required',
+                'cost' => 'nullable',
                 'stock' => 'nullable|integer|min:0',
                 'min_stock' => 'nullable|integer|min:0',
                 'is_active' => 'boolean',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
-            // Converter valores monetários para decimal
-            $validated['price'] = (float) $validated['price'];
-            $validated['cost'] = isset($validated['cost']) ? (float) $validated['cost'] : 0;
+            // Preparar os dados validados
+            $validated = $request->only([
+                'name', 'description', 'stock', 'min_stock', 'is_active'
+            ]);
+
+            // Converter e validar valores monetários
+            $price = str_replace(['.', ','], ['', '.'], $request->price);
+            if (!is_numeric($price)) {
+                throw new \Exception('O preço informado é inválido.');
+            }
+            $validated['price'] = (float) $price;
+
+            if ($request->filled('cost')) {
+                $cost = str_replace(['.', ','], ['', '.'], $request->cost);
+                if (!is_numeric($cost)) {
+                    throw new \Exception('O custo informado é inválido.');
+                }
+                $validated['cost'] = (float) $cost;
+            } else {
+                $validated['cost'] = 0;
+            }
+
+            // Validar se os valores são positivos
+            if ($validated['price'] < 0) {
+                throw new \Exception('O preço não pode ser negativo.');
+            }
+            if ($validated['cost'] < 0) {
+                throw new \Exception('O custo não pode ser negativo.');
+            }
 
             // Tratar upload de imagem
             if ($request->hasFile('image')) {
@@ -63,7 +90,7 @@ class ProductController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Erro ao criar produto. Por favor, tente novamente.');
+                ->with('error', $e->getMessage() ?: 'Erro ao criar produto. Por favor, tente novamente.');
         }
     }
 
@@ -85,23 +112,58 @@ class ProductController extends Controller
                 'data' => $request->all()
             ]);
 
-            $validated = $request->validate([
+            // Validar os dados antes de converter os valores monetários
+            $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'cost' => 'nullable|numeric|min:0',
+                'price' => 'required',
+                'cost' => 'nullable',
                 'stock' => 'nullable|integer|min:0',
                 'min_stock' => 'nullable|integer|min:0',
                 'is_active' => 'boolean',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'remove_image' => 'nullable|boolean'
             ]);
 
-            // Converter valores monetários para float
-            $validated['price'] = (float) str_replace(['.', ','], ['', '.'], $validated['price']);
-            $validated['cost'] = isset($validated['cost']) ? (float) str_replace(['.', ','], ['', '.'], $validated['cost']) : 0;
+            // Preparar os dados validados
+            $validated = $request->only([
+                'name', 'description', 'stock', 'min_stock', 'is_active'
+            ]);
 
-            // Tratar upload de imagem
-            if ($request->hasFile('image')) {
+            // Converter e validar valores monetários
+            $price = str_replace(['.', ','], ['', '.'], $request->price);
+            if (!is_numeric($price)) {
+                throw new \Exception('O preço informado é inválido.');
+            }
+            $validated['price'] = (float) $price;
+
+            if ($request->filled('cost')) {
+                $cost = str_replace(['.', ','], ['', '.'], $request->cost);
+                if (!is_numeric($cost)) {
+                    throw new \Exception('O custo informado é inválido.');
+                }
+                $validated['cost'] = (float) $cost;
+            } else {
+                $validated['cost'] = 0;
+            }
+
+            // Validar se os valores são positivos
+            if ($validated['price'] < 0) {
+                throw new \Exception('O preço não pode ser negativo.');
+            }
+            if ($validated['cost'] < 0) {
+                throw new \Exception('O custo não pode ser negativo.');
+            }
+
+            // Remover a imagem se solicitado
+            if ($request->boolean('remove_image')) {
+                if ($product->image && Storage::disk('public')->exists($product->image)) {
+                    Storage::disk('public')->delete($product->image);
+                }
+                $validated['image'] = null;
+            }
+            // Tratar upload de nova imagem
+            elseif ($request->hasFile('image')) {
                 // Excluir imagem antiga se existir
                 if ($product->image && Storage::disk('public')->exists($product->image)) {
                     Storage::disk('public')->delete($product->image);
@@ -126,7 +188,7 @@ class ProductController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Erro ao atualizar produto. Por favor, tente novamente.');
+                ->with('error', $e->getMessage() ?: 'Erro ao atualizar produto. Por favor, tente novamente.');
         }
     }
 

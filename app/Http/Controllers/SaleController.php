@@ -6,7 +6,10 @@ use App\Models\Sale;
 use App\Models\Product;
 use App\Models\Client;
 use App\Models\PaymentMethod;
+use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SaleController extends Controller
 {
@@ -26,43 +29,100 @@ class SaleController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'payment_method_id' => 'required|exists:payment_methods,id',
-            'products' => 'required|array',
-            'products.*.id' => 'required|exists:products,id',
-            'products.*.quantity' => 'required|integer|min:1',
-            'notes' => 'nullable|string',
-        ]);
-
-        $sale = Sale::create([
-            'client_id' => $validated['client_id'],
-            'payment_method_id' => $validated['payment_method_id'],
-            'notes' => $validated['notes'],
-            'status' => 'completed',
-        ]);
-
-        $total = 0;
-        foreach ($validated['products'] as $product) {
-            $productModel = Product::find($product['id']);
-            $quantity = $product['quantity'];
-            $price = $productModel->price;
-            $subtotal = $price * $quantity;
-
-            $sale->products()->attach($product['id'], [
-                'quantity' => $quantity,
-                'price' => $price,
-                'total' => $subtotal,
+        try {
+            $validated = $request->validate([
+                'client_id' => 'required|exists:clients,id',
+                'payment_method_id' => 'required|exists:payment_methods,id',
+                'products' => 'nullable|array',
+                'products.*.id' => 'required|exists:products,id',
+                'products.*.quantity' => 'required|integer|min:1',
+                'services' => 'nullable|array',
+                'services.*.id' => 'required|exists:services,id',
+                'services.*.quantity' => 'required|integer|min:1',
+                'notes' => 'nullable|string',
             ]);
 
-            $total += $subtotal;
-            $productModel->decrement('stock', $quantity);
+            // Iniciar transação
+            DB::beginTransaction();
+
+            $sale = Sale::create([
+                'client_id' => $validated['client_id'],
+                'payment_method_id' => $validated['payment_method_id'],
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'completed',
+                'total' => 0,
+            ]);
+
+            $total = 0;
+
+            // Processar produtos
+            if (!empty($validated['products'])) {
+                foreach ($validated['products'] as $product) {
+                    $productModel = Product::findOrFail($product['id']);
+                    
+                    // Verificar estoque
+                    if ($productModel->stock < $product['quantity']) {
+                        throw new \Exception("Estoque insuficiente para o produto: {$productModel->name}");
+                    }
+
+                    $quantity = $product['quantity'];
+                    $price = $productModel->price;
+                    $subtotal = $price * $quantity;
+
+                    $sale->products()->attach($product['id'], [
+                        'quantity' => $quantity,
+                        'price' => $price,
+                        'total' => $subtotal,
+                    ]);
+
+                    // Atualizar estoque
+                    $productModel->decrement('stock', $quantity);
+                    $total += $subtotal;
+                }
+            }
+
+            // Processar serviços
+            if (!empty($validated['services'])) {
+                foreach ($validated['services'] as $service) {
+                    $serviceModel = Service::findOrFail($service['id']);
+                    $quantity = $service['quantity'];
+                    $price = $serviceModel->price;
+                    $subtotal = $price * $quantity;
+
+                    $sale->services()->attach($service['id'], [
+                        'quantity' => $quantity,
+                        'price' => $price,
+                        'total' => $subtotal,
+                    ]);
+
+                    $total += $subtotal;
+                }
+            }
+
+            // Atualizar o total da venda
+            $sale->update(['total' => $total]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Venda registrada com sucesso!',
+                'redirect' => route('sales.index')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('Erro ao registrar venda', [
+                'error' => $e->getMessage(),
+                'data' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() ?: 'Erro ao registrar venda. Por favor, tente novamente.'
+            ], 422);
         }
-
-        $sale->update(['total' => $total]);
-
-        return redirect()->route('sales.index')
-            ->with('success', 'Venda registrada com sucesso!');
     }
 
     public function edit(Sale $sale)

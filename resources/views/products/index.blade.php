@@ -79,11 +79,24 @@
                                 <td>
                                     @if($product->image)
                                         <div class="product-image-container">
-                                            <img src="{{ url('storage/products/' . basename($product->image)) }}" 
-                                                 alt="{{ $product->name }}" 
-                                                 class="img-thumbnail product-image-zoom" 
-                                                 style="max-width: 50px; max-height: 50px; object-fit: cover;"
-                                                 data-full-image="{{ url('storage/products/' . basename($product->image)) }}">
+                                            @php
+                                                $imagePath = asset('storage/' . $product->image);
+                                                $imageExists = file_exists(public_path('storage/' . $product->image));
+                                            @endphp
+                                            
+                                            @if($imageExists)
+                                                <img src="{{ $imagePath }}" 
+                                                     alt="{{ $product->name }}" 
+                                                     class="img-thumbnail product-image-zoom" 
+                                                     style="max-width: 50px; max-height: 50px; object-fit: cover;"
+                                                     data-full-image="{{ $imagePath }}">
+                                                <div class="product-image-preview">
+                                                    <img src="{{ $imagePath }}" 
+                                                         alt="{{ $product->name }}">
+                                                </div>
+                                            @else
+                                                <span class="text-danger">Imagem não encontrada: {{ $product->image }}</span>
+                                            @endif
                                         </div>
                                     @else
                                         <span class="text-muted">Sem imagem</span>
@@ -116,8 +129,8 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <button type="button" 
-                                                class="btn btn-sm btn-danger" 
-                                                onclick="document.getElementById('delete-form-{{ $product->id }}').submit();">
+                                                class="btn btn-sm btn-danger delete-product" 
+                                                data-product-id="{{ $product->id }}">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -236,76 +249,42 @@
         });
 
         // Manipular exclusão de produto
-        const deleteForms = document.querySelectorAll('form[id^="delete-form-"]');
-        deleteForms.forEach(form => {
-            const deleteButton = document.querySelector(`button[onclick="document.getElementById('${form.id}').submit();"]`);
-            if (deleteButton) {
-                deleteButton.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (confirm('Tem certeza que deseja excluir este produto?')) {
-                        form.submit();
-                    }
-                });
-            }
-        });
-
-        // Adicionar funcionalidade de zoom nas imagens
-        const images = document.querySelectorAll('.product-image-zoom');
-        let preview = null;
-
-        images.forEach(img => {
-            img.addEventListener('mouseenter', function(e) {
-                const fullImageUrl = this.dataset.fullImage;
+        const deleteButtons = document.querySelectorAll('.delete-product');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const productId = this.dataset.productId;
+                const form = document.getElementById(`delete-form-${productId}`);
                 
-                // Criar o elemento de preview
-                preview = document.createElement('div');
-                preview.className = 'product-image-preview';
-                preview.innerHTML = `<img src="${fullImageUrl}" alt="Preview">`;
-                document.body.appendChild(preview);
-                
-                // Posicionar o preview próximo ao mouse
-                updatePreviewPosition(e);
-            });
-
-            img.addEventListener('mousemove', updatePreviewPosition);
-
-            img.addEventListener('mouseleave', function() {
-                if (preview) {
-                    preview.remove();
-                    preview = null;
+                if (confirm('Tem certeza que deseja excluir este produto?')) {
+                    form.submit();
                 }
             });
         });
 
-        // Função para atualizar a posição do preview
-        function updatePreviewPosition(e) {
-            if (!preview) return;
-
-            const mouseX = e.clientX;
-            const mouseY = e.clientY;
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const previewWidth = preview.offsetWidth;
-            const previewHeight = preview.offsetHeight;
-
-            // Calcular a posição ideal para o preview
-            let left = mouseX + 20; // 20px de offset do cursor
-            let top = mouseY + 20;
-
-            // Ajustar se estiver muito próximo da borda direita
-            if (left + previewWidth > viewportWidth) {
-                left = mouseX - previewWidth - 20;
-            }
-
-            // Ajustar se estiver muito próximo da borda inferior
-            if (top + previewHeight > viewportHeight) {
-                top = mouseY - previewHeight - 20;
-            }
-
-            preview.style.left = `${left}px`;
-            preview.style.top = `${top}px`;
-            preview.style.display = 'block';
-        }
+        // Image zoom functionality
+        const productImages = document.querySelectorAll('.product-image-zoom');
+        productImages.forEach(img => {
+            const container = img.closest('.product-image-container');
+            const preview = container.querySelector('.product-image-preview');
+            
+            // Show preview on hover
+            img.addEventListener('mouseenter', function() {
+                if (preview) {
+                    const rect = img.getBoundingClientRect();
+                    preview.style.display = 'block';
+                    preview.style.left = rect.right + 10 + 'px';
+                    preview.style.top = rect.top + 'px';
+                }
+            });
+            
+            // Hide preview when mouse leaves
+            container.addEventListener('mouseleave', function() {
+                if (preview) {
+                    preview.style.display = 'none';
+                }
+            });
+        });
     });
 </script>
 @endpush 
