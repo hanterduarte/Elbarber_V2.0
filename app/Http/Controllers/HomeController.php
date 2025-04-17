@@ -25,7 +25,7 @@ class HomeController extends Controller
         
         $todayAppointments = Appointment::whereDate('start_time', $today)->count();
         $todaySales = Sale::whereDate('created_at', $today)->count();
-        $todayRevenue = Sale::whereDate('created_at', $today)->sum('final_amount');
+        $todayRevenue = Sale::whereDate('created_at', $today)->sum('final_total');
         
         // Obtém os próximos agendamentos
         $upcomingAppointments = Appointment::with(['client', 'barber'])

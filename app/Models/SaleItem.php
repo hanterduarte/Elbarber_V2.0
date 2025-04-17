@@ -11,16 +11,16 @@ class SaleItem extends Model
 
     protected $fillable = [
         'sale_id',
-        'itemable_id',
-        'itemable_type',
+        'saleable_id',
+        'saleable_type',
         'quantity',
-        'price',
-        'discount'
+        'unit_price',
+        'total_price'
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'discount' => 'decimal:2'
+        'unit_price' => 'decimal:2',
+        'total_price' => 'decimal:2'
     ];
 
     public function sale()
@@ -28,7 +28,7 @@ class SaleItem extends Model
         return $this->belongsTo(Sale::class);
     }
 
-    public function itemable()
+    public function saleable()
     {
         return $this->morphTo();
     }

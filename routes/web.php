@@ -109,4 +109,5 @@ Route::middleware(['auth'])->group(function () {
 
     // PDV
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
+    Route::post('/pos/sale', [PosController::class, 'store'])->name('pos.store');
 }); 

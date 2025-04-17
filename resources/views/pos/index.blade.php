@@ -108,7 +108,7 @@
                     <h5 class="card-title mb-0">Carrinho</h5>
                 </div>
                 <div class="card-body">
-                    <form id="saleForm" action="{{ route('sales.store') }}" method="POST">
+                    <form id="saleForm" action="{{ route('pos.store') }}" method="POST">
                         @csrf
                         
                         <!-- Cliente -->
@@ -193,9 +193,24 @@
                         <div class="mb-3">
                             <label class="form-label">Formas de Pagamento</label>
                             <div id="payments">
-                                <!-- Pagamentos serão adicionados aqui -->
+                                <div class="input-group mb-2">
+                                    <select class="form-select payment-method" required style="max-width: 200px;">
+                                        <option value="">Selecione</option>
+                                        @foreach($paymentMethods as $method)
+                                            <option value="{{ $method->id }}">{{ $method->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input type="number" 
+                                           class="form-control payment-amount" 
+                                           step="0.01" 
+                                           min="0" 
+                                           required>
+                                    <button type="button" class="btn btn-danger remove-payment">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <button type="button" class="btn btn-secondary mt-2" id="addPayment">
+                            <button type="button" class="btn btn-secondary btn-sm mt-2" id="addPayment">
                                 <i class="fas fa-plus"></i> Adicionar Forma de Pagamento
                             </button>
                         </div>
@@ -203,13 +218,25 @@
                         <div class="mb-3">
                             <label class="form-label">Valor Recebido</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" id="amountReceived" step="0.01" value="0">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="amountReceived" 
+                                       step="0.01" 
+                                       min="0" 
+                                       value="0">
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Troco</label>
-                            <input type="text" class="form-control" id="change" readonly>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="change" 
+                                       readonly>
+                            </div>
                         </div>
 
                         <!-- Observações -->
@@ -320,6 +347,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         cartTotal.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
         updateTotals();
+        
+        // Atualizar o valor da primeira forma de pagamento com o total
+        const firstPaymentAmount = document.querySelector('.payment-amount');
+        if (firstPaymentAmount) {
+            const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
+            firstPaymentAmount.value = finalTotal.toFixed(2);
+            updatePaymentTotals();
+        }
     }
 
     // Função para atualizar os totais
@@ -328,20 +363,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const discountPercentage = parseFloat(discountPercentageInput.value) || 0;
         const discountAmountValue = parseFloat(discountAmountInput.value) || 0;
         
-        // Calcular desconto em valor baseado na porcentagem
         const percentageDiscount = subtotal * (discountPercentage / 100);
-        
-        // Desconto total (porcentagem + valor fixo)
         const totalDiscount = percentageDiscount + discountAmountValue;
-        
-        // Valor final
         const finalTotal = subtotal - totalDiscount;
 
         document.getElementById('subtotal').textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
         document.getElementById('discount').textContent = `R$ ${totalDiscount.toFixed(2).replace('.', ',')}`;
         document.getElementById('finalTotal').textContent = `R$ ${finalTotal.toFixed(2).replace('.', ',')}`;
         
-        updateChange();
+        // Se houver apenas uma forma de pagamento, atualizar seu valor
+        const paymentInputs = document.querySelectorAll('.payment-amount');
+        if (paymentInputs.length === 1) {
+            paymentInputs[0].value = finalTotal.toFixed(2);
+        }
+        
+        updatePaymentTotals();
     }
 
     // Eventos para atualizar totais quando os descontos mudarem
@@ -354,8 +390,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalPayments = Array.from(document.querySelectorAll('.payment-amount'))
             .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
 
-        if (totalPayments < finalTotal) {
-            alert('O valor total dos pagamentos é menor que o valor da venda!');
+        if (Math.abs(totalPayments - finalTotal) > 0.01) {
+            alert('O valor total dos pagamentos deve ser igual ao valor da venda!');
             return false;
         }
         return true;
@@ -375,41 +411,48 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!validatePayment()) {
+        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
+        const payments = Array.from(document.querySelectorAll('.payment-amount')).map((amount, index) => ({
+            payment_method_id: document.querySelectorAll('.payment-method')[index].value,
+            amount: parseFloat(amount.value) || 0
+        })).filter(payment => payment.amount > 0 && payment.payment_method_id);
+
+        // Validar se o total dos pagamentos corresponde ao valor final
+        const totalPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
+        const roundedFinalTotal = Math.round(finalTotal * 100) / 100;
+        const roundedTotalPayments = Math.round(totalPayments * 100) / 100;
+
+        if (Math.abs(roundedTotalPayments - roundedFinalTotal) > 0.01) {
+            alert('O total dos pagamentos deve ser igual ao valor final da venda!');
             return;
         }
 
-        // Desabilitar o botão de submit para evitar múltiplos envios
         const submitButton = this.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.innerHTML = 'Processando...';
 
-        // Preparar dados para envio
-        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
-        
-        // Coletar pagamentos
-        const payments = Array.from(document.querySelectorAll('.payment-row')).map(row => ({
-            payment_method_id: row.querySelector('.payment-method').value,
-            amount: parseFloat(row.querySelector('.payment-amount').value) || 0
-        })).filter(payment => payment.amount > 0);
-
-        // Preparar produtos
         const products = cart.filter(item => item.type === 'product').map(item => ({
             id: item.id,
             quantity: item.quantity
         }));
 
-        // Criar objeto de dados
+        const services = cart.filter(item => item.type === 'service').map(item => ({
+            id: item.id,
+            quantity: item.quantity
+        }));
+
         const data = {
             client_id: document.getElementById('client_id').value,
             payments: payments,
             products: products,
+            services: services,
             notes: document.getElementById('notes').value,
-            discount_percentage: parseFloat(discountPercentageInput.value) || 0,
-            discount_amount: parseFloat(discountAmountInput.value) || 0
+            discount_percentage: parseFloat(document.getElementById('discount_percentage').value) || 0,
+            discount_amount: parseFloat(document.getElementById('discount_amount').value) || 0
         };
 
-        // Enviar dados via fetch
+        console.log('Dados sendo enviados:', data);
+
         fetch(this.action, {
             method: 'POST',
             headers: {
@@ -418,74 +461,97 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        // Tenta fazer parse do JSON
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || 'Erro ao processar a venda.');
+                    } catch (e) {
+                        // Se não for JSON, provavelmente é um erro HTML
+                        console.error('Resposta do servidor:', text);
+                        throw new Error('Erro interno do servidor. Por favor, tente novamente.');
+                    }
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 window.location.href = data.redirect;
             } else {
-                alert(data.message || 'Erro ao processar a venda.');
-                submitButton.disabled = false;
-                submitButton.innerHTML = 'Finalizar Venda';
+                throw new Error(data.message || 'Erro ao processar a venda.');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Erro ao processar a venda. Por favor, tente novamente.');
+            alert(error.message);
             submitButton.disabled = false;
             submitButton.innerHTML = 'Finalizar Venda';
         });
     });
 
-    // Função para adicionar forma de pagamento
-    document.getElementById('addPayment').addEventListener('click', function() {
+    // Função atualizada para adicionar forma de pagamento
+    function addPaymentMethod(initialAmount = 0) {
         const paymentsDiv = document.getElementById('payments');
-        const paymentRow = document.createElement('div');
-        paymentRow.className = 'row mb-2 payment-row';
+        const paymentGroup = document.createElement('div');
+        paymentGroup.className = 'input-group mb-2';
         
-        paymentRow.innerHTML = `
-            <div class="col-5">
-                <select class="form-select payment-method" required>
-                    <option value="">Selecione...</option>
-                    @foreach($paymentMethods as $method)
-                        <option value="{{ $method->id }}">{{ $method->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-5">
-                <input type="number" class="form-control payment-amount" step="0.01" min="0" placeholder="Valor" required>
-            </div>
-            <div class="col-2">
-                <button type="button" class="btn btn-danger btn-sm remove-payment">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+        paymentGroup.innerHTML = `
+            <select class="form-select payment-method" required style="max-width: 200px;">
+                <option value="">Selecione</option>
+                @foreach($paymentMethods as $method)
+                    <option value="{{ $method->id }}">{{ $method->name }}</option>
+                @endforeach
+            </select>
+            <input type="number" 
+                   class="form-control payment-amount" 
+                   step="0.01" 
+                   min="0" 
+                   value="${initialAmount.toFixed(2)}"
+                   required>
+            <button type="button" class="btn btn-danger remove-payment">
+                <i class="fas fa-trash"></i>
+            </button>
         `;
         
         // Adicionar evento para remover pagamento
-        paymentRow.querySelector('.remove-payment').addEventListener('click', function() {
-            paymentRow.remove();
-            updateTotals();
+        paymentGroup.querySelector('.remove-payment').addEventListener('click', function() {
+            if (document.querySelectorAll('.payment-method').length > 1) {
+                paymentGroup.remove();
+                updatePaymentTotals();
+            } else {
+                alert('É necessário manter pelo menos uma forma de pagamento.');
+            }
         });
         
         // Adicionar evento para atualizar totais quando o valor mudar
-        paymentRow.querySelector('.payment-amount').addEventListener('input', updateTotals);
+        paymentGroup.querySelector('.payment-amount').addEventListener('input', updatePaymentTotals);
         
-        paymentsDiv.appendChild(paymentRow);
-    });
-
-    // Função para atualizar o troco
-    function updateChange() {
-        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
-        const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
-        const change = amountReceived - finalTotal;
-        
-        document.getElementById('change').value = change >= 0 ? 
-            `R$ ${change.toFixed(2).replace('.', ',')}` : 
-            'Valor insuficiente';
+        paymentsDiv.appendChild(paymentGroup);
+        return paymentGroup;
     }
 
-    // Evento para atualizar o troco quando o valor recebido mudar
-    document.getElementById('amountReceived').addEventListener('input', updateChange);
+    // Função para atualizar totais dos pagamentos
+    function updatePaymentTotals() {
+        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
+        const totalPayments = Array.from(document.querySelectorAll('.payment-amount'))
+            .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+        
+        // Arredondar os valores para 2 casas decimais
+        const roundedFinalTotal = Math.round(finalTotal * 100) / 100;
+        const roundedTotalPayments = Math.round(totalPayments * 100) / 100;
+        
+        // Atualizar valor recebido
+        document.getElementById('amountReceived').value = roundedTotalPayments.toFixed(2);
+        
+        // Calcular e atualizar troco
+        const change = roundedTotalPayments - roundedFinalTotal;
+        document.getElementById('change').value = change >= 0 ? 
+            change.toFixed(2) : 
+            'Valor insuficiente';
+    }
 
     // Limpar carrinho
     clearCartBtn.addEventListener('click', function() {
@@ -495,8 +561,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Adicionar primeira forma de pagamento
-    document.getElementById('addPayment').click();
+    // Adicionar evento para o botão de adicionar pagamento
+    document.getElementById('addPayment').addEventListener('click', function() {
+        addPaymentMethod(0);
+    });
+
+    // Inicialização dos pagamentos
+    const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.')) || 0;
+    if (document.querySelectorAll('.payment-method').length === 0) {
+        addPaymentMethod(finalTotal);
+    }
+    updatePaymentTotals();
 
     // Funções do Caixa
     function loadCashRegisterStatus() {
@@ -626,6 +701,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Carregar status inicial do caixa
     loadCashRegisterStatus();
+
+    // Atualizar totais quando um valor de pagamento for alterado
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('payment-amount')) {
+            updatePaymentTotals();
+        }
+    });
 });
 </script>
 @endpush

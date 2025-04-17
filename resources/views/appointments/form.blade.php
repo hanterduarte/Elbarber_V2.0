@@ -124,4 +124,66 @@
         </div>
     </div>
 </div>
-@endsection 
+@endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Validar se pelo menos um serviço foi selecionado
+        const services = form.querySelectorAll('input[name="services[]"]:checked');
+        if (services.length === 0) {
+            alert('Selecione pelo menos um serviço!');
+            return;
+        }
+
+        // Desabilitar o botão para evitar múltiplos envios
+        submitButton.disabled = true;
+        submitButton.innerHTML = 'Salvando...';
+
+        // Enviar o formulário
+        fetch(form.action, {
+            method: form.method,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Object.fromEntries(new FormData(form)))
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || 'Erro ao salvar agendamento.');
+                    } catch (e) {
+                        console.error('Resposta do servidor:', text);
+                        throw new Error('Erro ao salvar agendamento. Por favor, tente novamente.');
+                    }
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect || '{{ route('appointments.index') }}';
+            } else {
+                throw new Error(data.message || 'Erro ao salvar agendamento.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message);
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Salvar';
+        });
+    });
+});
+</script>
+@endpush 

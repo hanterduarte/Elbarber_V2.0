@@ -12,7 +12,7 @@ class Sale extends Model
 
     protected $fillable = [
         'client_id',
-        'total',
+        'subtotal',
         'discount_percentage',
         'discount_amount',
         'final_total',
@@ -21,7 +21,7 @@ class Sale extends Model
     ];
 
     protected $casts = [
-        'total' => 'float',
+        'subtotal' => 'float',
         'discount_percentage' => 'float',
         'discount_amount' => 'float',
         'final_total' => 'float',
@@ -52,5 +52,10 @@ class Sale extends Model
         return $this->belongsToMany(Service::class)
             ->withPivot(['quantity', 'price', 'total'])
             ->withTimestamps();
+    }
+
+    public function items()
+    {
+        return $this->hasMany(SaleItem::class);
     }
 } 

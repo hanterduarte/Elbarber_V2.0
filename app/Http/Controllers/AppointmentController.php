@@ -46,9 +46,30 @@ class AppointmentController extends Controller
 
             $appointment->services()->attach($validated['services']);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Agendamento criado com sucesso!',
+                    'redirect' => route('appointments.index')
+                ]);
+            }
+
             return redirect()->route('appointments.index')
                 ->with('success', 'Agendamento criado com sucesso!');
         } catch (\Exception $e) {
+            \Log::error('Erro ao criar agendamento', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $request->all()
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao criar agendamento. Por favor, tente novamente.'
+                ], 422);
+            }
+
             return back()
                 ->withInput()
                 ->with('error', 'Erro ao criar agendamento. Por favor, tente novamente.');
