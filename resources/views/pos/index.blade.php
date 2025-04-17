@@ -76,6 +76,29 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Área de Gerenciamento do Caixa -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Gerenciamento do Caixa</h5>
+                </div>
+                <div class="card-body">
+                    <div id="cashRegisterStatus">
+                        <!-- Status do caixa será carregado via JavaScript -->
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="button" class="btn btn-success" id="openRegister" style="display: none;">
+                            <i class="fas fa-cash-register"></i> Abrir Caixa
+                        </button>
+                        <button type="button" class="btn btn-danger" id="closeRegister" style="display: none;">
+                            <i class="fas fa-cash-register"></i> Fechar Caixa
+                        </button>
+                        <button type="button" class="btn btn-warning" id="withdrawalButton" style="display: none;">
+                            <i class="fas fa-money-bill-wave"></i> Sangria
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Painel do Carrinho e Finalização -->
@@ -136,6 +159,18 @@
                                    value="0">
                         </div>
 
+                        <!-- Desconto em Valor -->
+                        <div class="mb-3">
+                            <label for="discount_amount" class="form-label">Desconto (R$)</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="discount_amount" 
+                                   name="discount_amount" 
+                                   min="0" 
+                                   step="0.01" 
+                                   value="0">
+                        </div>
+
                         <!-- Totais -->
                         <div class="table-responsive mb-3">
                             <table class="table">
@@ -177,29 +212,6 @@
                             <input type="text" class="form-control" id="change" readonly>
                         </div>
 
-                        <!-- Área de Gerenciamento do Caixa -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="card-title mb-0">Gerenciamento do Caixa</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="cashRegisterStatus">
-                                    <!-- Status do caixa será carregado via JavaScript -->
-                                </div>
-                                <div class="d-grid gap-2 mt-3">
-                                    <button type="button" class="btn btn-success" id="openRegister" style="display: none;">
-                                        <i class="fas fa-cash-register"></i> Abrir Caixa
-                                    </button>
-                                    <button type="button" class="btn btn-danger" id="closeRegister" style="display: none;">
-                                        <i class="fas fa-cash-register"></i> Fechar Caixa
-                                    </button>
-                                    <button type="button" class="btn btn-warning" id="withdrawalButton" style="display: none;">
-                                        <i class="fas fa-money-bill-wave"></i> Sangria
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Observações -->
                         <div class="mb-3">
                             <label for="notes" class="form-label">Observações</label>
@@ -231,6 +243,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const clearCartBtn = document.getElementById('clearCart');
     const completeSaleBtn = document.getElementById('completeSale');
     const saleForm = document.getElementById('saleForm');
+    const discountPercentageInput = document.getElementById('discount_percentage');
+    const discountAmountInput = document.getElementById('discount_amount');
 
     // Adicionar item ao carrinho
     document.querySelectorAll('.add-to-cart').forEach(button => {
@@ -240,13 +254,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = this.dataset.name;
             const price = parseFloat(this.dataset.price);
             
-            // Verificar se é produto e tem estoque
             if (type === 'product' && parseInt(this.dataset.stock) <= 0) {
                 alert('Produto sem estoque!');
                 return;
             }
 
-            // Adicionar ao carrinho
             cart.push({
                 type,
                 id,
@@ -280,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
             quantityInput.className = 'form-control form-control-sm';
             quantityInput.style.width = '60px';
             quantityInput.addEventListener('change', function() {
-                item.quantity = parseInt(this.value);
+                item.quantity = parseInt(this.value) || 1;
                 updateCart();
             });
             quantityCell.appendChild(quantityInput);
@@ -306,34 +318,35 @@ document.addEventListener('DOMContentLoaded', function() {
             removeCell.appendChild(removeBtn);
         });
 
-        // Atualizar total
         cartTotal.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
-
-        // Habilitar/desabilitar botão de finalizar
-        completeSaleBtn.disabled = cart.length === 0;
+        updateTotals();
     }
-
-    // Limpar carrinho
-    clearCartBtn.addEventListener('click', function() {
-        if (confirm('Tem certeza que deseja limpar o carrinho?')) {
-            cart.length = 0;
-            updateCart();
-        }
-    });
 
     // Função para atualizar os totais
     function updateTotals() {
         const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-        const discountPercentage = parseFloat(document.getElementById('discount_percentage').value) || 0;
-        const discountAmount = subtotal * (discountPercentage / 100);
-        const finalTotal = subtotal - discountAmount;
+        const discountPercentage = parseFloat(discountPercentageInput.value) || 0;
+        const discountAmountValue = parseFloat(discountAmountInput.value) || 0;
+        
+        // Calcular desconto em valor baseado na porcentagem
+        const percentageDiscount = subtotal * (discountPercentage / 100);
+        
+        // Desconto total (porcentagem + valor fixo)
+        const totalDiscount = percentageDiscount + discountAmountValue;
+        
+        // Valor final
+        const finalTotal = subtotal - totalDiscount;
 
         document.getElementById('subtotal').textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
-        document.getElementById('discount').textContent = `R$ ${discountAmount.toFixed(2).replace('.', ',')}`;
+        document.getElementById('discount').textContent = `R$ ${totalDiscount.toFixed(2).replace('.', ',')}`;
         document.getElementById('finalTotal').textContent = `R$ ${finalTotal.toFixed(2).replace('.', ',')}`;
         
         updateChange();
     }
+
+    // Eventos para atualizar totais quando os descontos mudarem
+    discountPercentageInput.addEventListener('input', updateTotals);
+    discountAmountInput.addEventListener('input', updateTotals);
 
     // Função para validar o valor recebido
     function validatePayment() {
@@ -352,10 +365,6 @@ document.addEventListener('DOMContentLoaded', function() {
     saleForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        if (!validatePayment()) {
-            return;
-        }
-
         if (cart.length === 0) {
             alert('Adicione itens ao carrinho!');
             return;
@@ -366,82 +375,102 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!document.getElementById('payment_method_id').value) {
-            alert('Selecione uma forma de pagamento!');
+        if (!validatePayment()) {
             return;
         }
-
-        // Separar produtos e serviços
-        const products = cart.filter(item => item.type === 'product').map((item, index) => ({
-            id: item.id,
-            quantity: item.quantity
-        }));
-
-        const services = cart.filter(item => item.type === 'service').map((item, index) => ({
-            id: item.id,
-            quantity: item.quantity
-        }));
-
-        // Adicionar produtos ao formulário
-        products.forEach((product, index) => {
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = `products[${index}][id]`;
-            idInput.value = product.id;
-            saleForm.appendChild(idInput);
-
-            const quantityInput = document.createElement('input');
-            quantityInput.type = 'hidden';
-            quantityInput.name = `products[${index}][quantity]`;
-            quantityInput.value = product.quantity;
-            saleForm.appendChild(quantityInput);
-        });
-
-        // Adicionar serviços ao formulário
-        services.forEach((service, index) => {
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = `services[${index}][id]`;
-            idInput.value = service.id;
-            saleForm.appendChild(idInput);
-
-            const quantityInput = document.createElement('input');
-            quantityInput.type = 'hidden';
-            quantityInput.name = `services[${index}][quantity]`;
-            quantityInput.value = service.quantity;
-            saleForm.appendChild(quantityInput);
-        });
 
         // Desabilitar o botão de submit para evitar múltiplos envios
         const submitButton = this.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         submitButton.innerHTML = 'Processando...';
 
-        // Enviar formulário
+        // Preparar dados para envio
+        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
+        
+        // Coletar pagamentos
+        const payments = Array.from(document.querySelectorAll('.payment-row')).map(row => ({
+            payment_method_id: row.querySelector('.payment-method').value,
+            amount: parseFloat(row.querySelector('.payment-amount').value) || 0
+        })).filter(payment => payment.amount > 0);
+
+        // Preparar produtos
+        const products = cart.filter(item => item.type === 'product').map(item => ({
+            id: item.id,
+            quantity: item.quantity
+        }));
+
+        // Criar objeto de dados
+        const data = {
+            client_id: document.getElementById('client_id').value,
+            payments: payments,
+            products: products,
+            notes: document.getElementById('notes').value,
+            discount_percentage: parseFloat(discountPercentageInput.value) || 0,
+            discount_amount: parseFloat(discountAmountInput.value) || 0
+        };
+
+        // Enviar dados via fetch
         fetch(this.action, {
             method: 'POST',
-            body: new FormData(this),
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify(data)
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(data.message);
                 window.location.href = data.redirect;
             } else {
-                alert(data.message);
+                alert(data.message || 'Erro ao processar a venda.');
                 submitButton.disabled = false;
                 submitButton.innerHTML = 'Finalizar Venda';
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
+            console.error('Error:', error);
             alert('Erro ao processar a venda. Por favor, tente novamente.');
             submitButton.disabled = false;
             submitButton.innerHTML = 'Finalizar Venda';
         });
+    });
+
+    // Função para adicionar forma de pagamento
+    document.getElementById('addPayment').addEventListener('click', function() {
+        const paymentsDiv = document.getElementById('payments');
+        const paymentRow = document.createElement('div');
+        paymentRow.className = 'row mb-2 payment-row';
+        
+        paymentRow.innerHTML = `
+            <div class="col-5">
+                <select class="form-select payment-method" required>
+                    <option value="">Selecione...</option>
+                    @foreach($paymentMethods as $method)
+                        <option value="{{ $method->id }}">{{ $method->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-5">
+                <input type="number" class="form-control payment-amount" step="0.01" min="0" placeholder="Valor" required>
+            </div>
+            <div class="col-2">
+                <button type="button" class="btn btn-danger btn-sm remove-payment">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        // Adicionar evento para remover pagamento
+        paymentRow.querySelector('.remove-payment').addEventListener('click', function() {
+            paymentRow.remove();
+            updateTotals();
+        });
+        
+        // Adicionar evento para atualizar totais quando o valor mudar
+        paymentRow.querySelector('.payment-amount').addEventListener('input', updateTotals);
+        
+        paymentsDiv.appendChild(paymentRow);
     });
 
     // Função para atualizar o troco
@@ -450,66 +479,25 @@ document.addEventListener('DOMContentLoaded', function() {
         const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
         const change = amountReceived - finalTotal;
         
-        document.getElementById('change').value = `R$ ${Math.max(0, change).toFixed(2).replace('.', ',')}`;
+        document.getElementById('change').value = change >= 0 ? 
+            `R$ ${change.toFixed(2).replace('.', ',')}` : 
+            'Valor insuficiente';
     }
 
-    // Função para adicionar forma de pagamento
-    function addPaymentMethod() {
-        const payments = document.getElementById('payments');
-        const paymentDiv = document.createElement('div');
-        paymentDiv.className = 'input-group mb-2';
-        
-        paymentDiv.innerHTML = `
-            <select class="form-select payment-method" name="payments[][payment_method_id]" required>
-                <option value="">Selecione a forma de pagamento</option>
-                @foreach($paymentMethods as $method)
-                    <option value="{{ $method->id }}">{{ $method->name }}</option>
-                @endforeach
-            </select>
-            <input type="number" 
-                   class="form-control payment-amount" 
-                   name="payments[][amount]" 
-                   step="0.01" 
-                   min="0" 
-                   placeholder="Valor"
-                   required>
-            <button class="btn btn-outline-danger remove-payment" type="button">
-                <i class="fas fa-trash"></i>
-            </button>
-        `;
-        
-        payments.appendChild(paymentDiv);
-        
-        // Adicionar evento para remover forma de pagamento
-        paymentDiv.querySelector('.remove-payment').addEventListener('click', function() {
-            paymentDiv.remove();
-            updatePayments();
-        });
-        
-        // Adicionar evento para atualizar valores quando o valor mudar
-        paymentDiv.querySelector('.payment-amount').addEventListener('input', updatePayments);
-    }
+    // Evento para atualizar o troco quando o valor recebido mudar
+    document.getElementById('amountReceived').addEventListener('input', updateChange);
 
-    // Função para atualizar os pagamentos
-    function updatePayments() {
-        const paymentAmounts = document.querySelectorAll('.payment-amount');
-        const total = Array.from(paymentAmounts)
-            .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
-        
-        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
-        const remaining = finalTotal - total;
-        
-        // Atualizar o valor recebido
-        document.getElementById('amountReceived').value = total.toFixed(2);
-        updateChange();
-    }
+    // Limpar carrinho
+    clearCartBtn.addEventListener('click', function() {
+        if (confirm('Tem certeza que deseja limpar o carrinho?')) {
+            cart.length = 0;
+            updateCart();
+        }
+    });
 
-    // Evento para desconto
-    document.getElementById('discount_percentage').addEventListener('input', updateTotals);
-    
-    // Evento para adicionar forma de pagamento
-    document.getElementById('addPayment').addEventListener('click', addPaymentMethod);
-    
+    // Adicionar primeira forma de pagamento
+    document.getElementById('addPayment').click();
+
     // Funções do Caixa
     function loadCashRegisterStatus() {
         fetch('/api/cash-register/status')
