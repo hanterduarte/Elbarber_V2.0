@@ -67,7 +67,17 @@ php artisan key:generate
 php artisan migrate:fresh --seed
 ```
 
-8. Inicie o servidor de desenvolvimento:
+8. Crie o link simbólico para o armazenamento:
+```bash
+php artisan storage:link
+```
+
+9. Configure as permissões das pastas de armazenamento:
+```bash
+chmod -R 775 storage bootstrap/cache
+```
+
+10. Inicie o servidor de desenvolvimento:
 ```bash
 php artisan serve
 ```

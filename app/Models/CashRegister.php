@@ -27,11 +27,11 @@ class CashRegister extends Model
     ];
 
     protected $casts = [
-        'opening_balance' => 'decimal:2',
-        'closing_balance' => 'decimal:2',
-        'total_sales' => 'decimal:2',
-        'total_withdrawals' => 'decimal:2',
-        'total_deposits' => 'decimal:2',
+        'opening_balance' => 'float',
+        'closing_balance' => 'float',
+        'total_sales' => 'float',
+        'total_withdrawals' => 'float',
+        'total_deposits' => 'float',
         'opened_at' => 'datetime',
         'closed_at' => 'datetime'
     ];
@@ -56,5 +56,10 @@ class CashRegister extends Model
     public function movements()
     {
         return $this->hasMany(CashRegisterMovement::class);
+    }
+
+    public function getCurrentBalance()
+    {
+        return $this->opening_balance + $this->total_sales + $this->total_deposits - $this->total_withdrawals;
     }
 } 

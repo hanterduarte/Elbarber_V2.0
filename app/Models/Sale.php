@@ -4,59 +4,53 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'barbershop_id',
-        'barber_id',
         'client_id',
-        'payment_method_id',
         'total',
-        'discount',
-        'status',
-        'notes'
+        'discount_percentage',
+        'discount_amount',
+        'final_total',
+        'notes',
+        'status'
     ];
 
     protected $casts = [
-        'total' => 'decimal:2',
-        'discount' => 'decimal:2'
+        'total' => 'float',
+        'discount_percentage' => 'float',
+        'discount_amount' => 'float',
+        'final_total' => 'float',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime'
     ];
-
-    public function barbershop()
-    {
-        return $this->belongsTo(Barbershop::class);
-    }
-
-    public function barber()
-    {
-        return $this->belongsTo(Barber::class);
-    }
 
     public function client()
     {
         return $this->belongsTo(Client::class);
     }
 
-    public function paymentMethod()
+    public function payments()
     {
-        return $this->belongsTo(PaymentMethod::class);
-    }
-
-    public function items()
-    {
-        return $this->hasMany(SaleItem::class);
-    }
-
-    public function services()
-    {
-        return $this->morphedByMany(Service::class, 'itemable', 'sale_items');
+        return $this->hasMany(SalePayment::class);
     }
 
     public function products()
     {
-        return $this->morphedByMany(Product::class, 'itemable', 'sale_items');
+        return $this->belongsToMany(Product::class)
+            ->withPivot(['quantity', 'price', 'total'])
+            ->withTimestamps();
+    }
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class)
+            ->withPivot(['quantity', 'price', 'total'])
+            ->withTimestamps();
     }
 } 

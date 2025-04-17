@@ -6,9 +6,11 @@ use App\Models\CashRegister;
 use App\Models\CashRegisterTransaction;
 use App\Models\PaymentMethod;
 use App\Models\Barber;
+use App\Models\CashRegisterMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class CashRegisterController extends Controller
 {
@@ -37,56 +39,157 @@ class CashRegisterController extends Controller
         return view('cash-register.index', compact('cashRegister'));
     }
 
-    public function open(Request $request)
+    public function status()
     {
-        $request->validate([
-            'opening_balance' => 'required|numeric|min:0',
-            'notes' => 'nullable|string'
-        ]);
+        try {
+            $currentRegister = CashRegister::where('status', 'open')->latest()->first();
+            $lastClosedRegister = CashRegister::where('status', 'closed')->latest()->first();
 
-        $user = Auth::user();
-        $barber = $user->barber;
+            if ($currentRegister) {
+                return response()->json([
+                    'status' => 'open',
+                    'opened_at' => $currentRegister->opened_at,
+                    'current_balance' => $currentRegister->getCurrentBalance()
+                ]);
+            }
 
-        $cashRegister = new CashRegister();
-        $cashRegister->user_id = $user->id;
-        $cashRegister->barber_id = $barber ? $barber->id : null;
-        $cashRegister->opening_balance = $request->opening_balance;
-        $cashRegister->status = 'open';
-        $cashRegister->opened_at = Carbon::now();
-        $cashRegister->notes = $request->notes;
-        $cashRegister->save();
-
-        return redirect()->route('cash-register.index')
-            ->with('success', 'Caixa aberto com sucesso.');
+            return response()->json([
+                'status' => 'closed',
+                'last_closed_at' => $lastClosedRegister ? $lastClosedRegister->closed_at : null
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting cash register status: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao obter status do caixa'], 500);
+        }
     }
 
-    public function close(Request $request)
+    public function open(Request $request)
     {
-        $request->validate([
-            'closing_balance' => 'required|numeric|min:0',
-            'notes' => 'nullable|string'
-        ]);
+        try {
+            $request->validate([
+                'opening_balance' => 'required|numeric|min:0'
+            ]);
 
-        $user = Auth::user();
-        $barber = $user->barber;
+            if (CashRegister::where('status', 'open')->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Já existe um caixa aberto'
+                ], 422);
+            }
 
-        $cashRegister = CashRegister::where('user_id', $user->id)
-            ->whereNull('closed_at')
-            ->when($barber, function ($query) use ($barber) {
-                return $query->where('barber_id', $barber->id);
-            }, function ($query) {
-                return $query->whereNull('barber_id');
-            })
-            ->firstOrFail();
+            $register = CashRegister::create([
+                'user_id' => Auth::id(),
+                'opening_balance' => $request->opening_balance,
+                'status' => 'open',
+                'opened_at' => now()
+            ]);
 
-        $cashRegister->closing_balance = $request->closing_balance;
-        $cashRegister->status = 'closed';
-        $cashRegister->closed_at = Carbon::now();
-        $cashRegister->notes = $request->notes;
-        $cashRegister->save();
+            CashRegisterMovement::create([
+                'user_id' => Auth::id(),
+                'type' => 'opening',
+                'amount' => $request->opening_balance,
+                'description' => 'Abertura de caixa'
+            ]);
 
-        return redirect()->route('cash-register.index')
-            ->with('success', 'Caixa fechado com sucesso.');
+            return response()->json([
+                'success' => true,
+                'message' => 'Caixa aberto com sucesso'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error opening cash register: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao abrir o caixa'
+            ], 500);
+        }
+    }
+
+    public function close()
+    {
+        try {
+            $register = CashRegister::where('status', 'open')->latest()->first();
+
+            if (!$register) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Não há caixa aberto'
+                ], 422);
+            }
+
+            $currentBalance = $register->getCurrentBalance();
+
+            $register->update([
+                'status' => 'closed',
+                'closing_balance' => $currentBalance,
+                'closed_at' => now()
+            ]);
+
+            CashRegisterMovement::create([
+                'user_id' => Auth::id(),
+                'type' => 'closing',
+                'amount' => $currentBalance,
+                'description' => 'Fechamento de caixa'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Caixa fechado com sucesso'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error closing cash register: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao fechar o caixa'
+            ], 500);
+        }
+    }
+
+    public function withdrawal(Request $request)
+    {
+        try {
+            $request->validate([
+                'amount' => 'required|numeric|min:0.01',
+                'description' => 'required|string'
+            ]);
+
+            $register = CashRegister::where('status', 'open')->latest()->first();
+
+            if (!$register) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Não há caixa aberto'
+                ], 422);
+            }
+
+            $currentBalance = $register->getCurrentBalance();
+
+            if ($currentBalance < $request->amount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Saldo insuficiente para realizar a sangria'
+                ], 422);
+            }
+
+            CashRegisterMovement::create([
+                'user_id' => Auth::id(),
+                'type' => 'withdrawal',
+                'amount' => $request->amount,
+                'description' => $request->description
+            ]);
+
+            $register->increment('total_withdrawals', $request->amount);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sangria realizada com sucesso'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error processing withdrawal: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao realizar sangria'
+            ], 500);
+        }
     }
 
     public function transaction()

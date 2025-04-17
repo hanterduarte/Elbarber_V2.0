@@ -123,15 +123,81 @@
                             </table>
                         </div>
 
-                        <!-- Forma de Pagamento -->
+                        <!-- Desconto -->
                         <div class="mb-3">
-                            <label for="payment_method" class="form-label">Forma de Pagamento</label>
-                            <select class="form-select" id="payment_method" name="payment_method" required>
-                                <option value="">Selecione a forma de pagamento</option>
-                                @foreach($paymentMethods as $method)
-                                    <option value="{{ $method->id }}">{{ $method->name }}</option>
-                                @endforeach
-                            </select>
+                            <label for="discount_percentage" class="form-label">Desconto (%)</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="discount_percentage" 
+                                   name="discount_percentage" 
+                                   min="0" 
+                                   max="100" 
+                                   step="0.01" 
+                                   value="0">
+                        </div>
+
+                        <!-- Totais -->
+                        <div class="table-responsive mb-3">
+                            <table class="table">
+                                <tr>
+                                    <td>Subtotal:</td>
+                                    <td class="text-end" id="subtotal">R$ 0,00</td>
+                                </tr>
+                                <tr>
+                                    <td>Desconto:</td>
+                                    <td class="text-end" id="discount">R$ 0,00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total:</strong></td>
+                                    <td class="text-end"><strong id="finalTotal">R$ 0,00</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Pagamentos -->
+                        <div class="mb-3">
+                            <label class="form-label">Formas de Pagamento</label>
+                            <div id="payments">
+                                <!-- Pagamentos serão adicionados aqui -->
+                            </div>
+                            <button type="button" class="btn btn-secondary mt-2" id="addPayment">
+                                <i class="fas fa-plus"></i> Adicionar Forma de Pagamento
+                            </button>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Valor Recebido</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="amountReceived" step="0.01" value="0">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Troco</label>
+                            <input type="text" class="form-control" id="change" readonly>
+                        </div>
+
+                        <!-- Área de Gerenciamento do Caixa -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">Gerenciamento do Caixa</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="cashRegisterStatus">
+                                    <!-- Status do caixa será carregado via JavaScript -->
+                                </div>
+                                <div class="d-grid gap-2 mt-3">
+                                    <button type="button" class="btn btn-success" id="openRegister" style="display: none;">
+                                        <i class="fas fa-cash-register"></i> Abrir Caixa
+                                    </button>
+                                    <button type="button" class="btn btn-danger" id="closeRegister" style="display: none;">
+                                        <i class="fas fa-cash-register"></i> Fechar Caixa
+                                    </button>
+                                    <button type="button" class="btn btn-warning" id="withdrawalButton" style="display: none;">
+                                        <i class="fas fa-money-bill-wave"></i> Sangria
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Observações -->
@@ -229,8 +295,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const removeCell = row.insertCell(3);
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
-            removeBtn.className = 'btn btn-danger btn-sm';
-            removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+            removeBtn.className = 'btn btn-sm';
+            removeBtn.innerHTML = '<i class="fas fa-trash text-danger"></i>';
+            removeBtn.style.padding = '0.25rem 0.5rem';
+            removeBtn.title = 'Remover item';
             removeBtn.addEventListener('click', function() {
                 cart.splice(index, 1);
                 updateCart();
@@ -253,10 +321,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Finalizar venda
+    // Função para atualizar os totais
+    function updateTotals() {
+        const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        const discountPercentage = parseFloat(document.getElementById('discount_percentage').value) || 0;
+        const discountAmount = subtotal * (discountPercentage / 100);
+        const finalTotal = subtotal - discountAmount;
+
+        document.getElementById('subtotal').textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+        document.getElementById('discount').textContent = `R$ ${discountAmount.toFixed(2).replace('.', ',')}`;
+        document.getElementById('finalTotal').textContent = `R$ ${finalTotal.toFixed(2).replace('.', ',')}`;
+        
+        updateChange();
+    }
+
+    // Função para validar o valor recebido
+    function validatePayment() {
+        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
+        const totalPayments = Array.from(document.querySelectorAll('.payment-amount'))
+            .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+
+        if (totalPayments < finalTotal) {
+            alert('O valor total dos pagamentos é menor que o valor da venda!');
+            return false;
+        }
+        return true;
+    }
+
+    // Atualizar o formulário para incluir validação
     saleForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
+        if (!validatePayment()) {
+            return;
+        }
+
         if (cart.length === 0) {
             alert('Adicione itens ao carrinho!');
             return;
@@ -267,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!document.getElementById('payment_method').value) {
+        if (!document.getElementById('payment_method_id').value) {
             alert('Selecione uma forma de pagamento!');
             return;
         }
@@ -344,6 +443,201 @@ document.addEventListener('DOMContentLoaded', function() {
             submitButton.innerHTML = 'Finalizar Venda';
         });
     });
+
+    // Função para atualizar o troco
+    function updateChange() {
+        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
+        const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
+        const change = amountReceived - finalTotal;
+        
+        document.getElementById('change').value = `R$ ${Math.max(0, change).toFixed(2).replace('.', ',')}`;
+    }
+
+    // Função para adicionar forma de pagamento
+    function addPaymentMethod() {
+        const payments = document.getElementById('payments');
+        const paymentDiv = document.createElement('div');
+        paymentDiv.className = 'input-group mb-2';
+        
+        paymentDiv.innerHTML = `
+            <select class="form-select payment-method" name="payments[][payment_method_id]" required>
+                <option value="">Selecione a forma de pagamento</option>
+                @foreach($paymentMethods as $method)
+                    <option value="{{ $method->id }}">{{ $method->name }}</option>
+                @endforeach
+            </select>
+            <input type="number" 
+                   class="form-control payment-amount" 
+                   name="payments[][amount]" 
+                   step="0.01" 
+                   min="0" 
+                   placeholder="Valor"
+                   required>
+            <button class="btn btn-outline-danger remove-payment" type="button">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        
+        payments.appendChild(paymentDiv);
+        
+        // Adicionar evento para remover forma de pagamento
+        paymentDiv.querySelector('.remove-payment').addEventListener('click', function() {
+            paymentDiv.remove();
+            updatePayments();
+        });
+        
+        // Adicionar evento para atualizar valores quando o valor mudar
+        paymentDiv.querySelector('.payment-amount').addEventListener('input', updatePayments);
+    }
+
+    // Função para atualizar os pagamentos
+    function updatePayments() {
+        const paymentAmounts = document.querySelectorAll('.payment-amount');
+        const total = Array.from(paymentAmounts)
+            .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+        
+        const finalTotal = parseFloat(document.getElementById('finalTotal').textContent.replace('R$ ', '').replace(',', '.'));
+        const remaining = finalTotal - total;
+        
+        // Atualizar o valor recebido
+        document.getElementById('amountReceived').value = total.toFixed(2);
+        updateChange();
+    }
+
+    // Evento para desconto
+    document.getElementById('discount_percentage').addEventListener('input', updateTotals);
+    
+    // Evento para adicionar forma de pagamento
+    document.getElementById('addPayment').addEventListener('click', addPaymentMethod);
+    
+    // Funções do Caixa
+    function loadCashRegisterStatus() {
+        fetch('/api/cash-register/status')
+            .then(response => response.json())
+            .then(data => {
+                const statusDiv = document.getElementById('cashRegisterStatus');
+                const openBtn = document.getElementById('openRegister');
+                const closeBtn = document.getElementById('closeRegister');
+                const withdrawalBtn = document.getElementById('withdrawalButton');
+
+                if (data.status === 'open') {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Caixa Aberto</strong><br>
+                            Aberto em: ${new Date(data.opened_at).toLocaleString()}<br>
+                            Saldo Atual: R$ ${data.current_balance.toFixed(2).replace('.', ',')}
+                        </div>
+                    `;
+                    openBtn.style.display = 'none';
+                    closeBtn.style.display = 'block';
+                    withdrawalBtn.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Caixa Fechado</strong><br>
+                            ${data.last_closed_at ? `Último fechamento: ${new Date(data.last_closed_at).toLocaleString()}` : ''}
+                        </div>
+                    `;
+                    openBtn.style.display = 'block';
+                    closeBtn.style.display = 'none';
+                    withdrawalBtn.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar status do caixa:', error);
+            });
+    }
+
+    // Abrir Caixa
+    document.getElementById('openRegister').addEventListener('click', function() {
+        const amount = prompt('Digite o valor inicial do caixa:');
+        if (amount === null || amount === '') return;
+
+        fetch('/api/cash-register/open', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ opening_balance: parseFloat(amount) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Caixa aberto com sucesso!');
+                loadCashRegisterStatus();
+            } else {
+                alert(data.message || 'Erro ao abrir o caixa');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao abrir o caixa');
+        });
+    });
+
+    // Fechar Caixa
+    document.getElementById('closeRegister').addEventListener('click', function() {
+        if (!confirm('Tem certeza que deseja fechar o caixa?')) return;
+
+        fetch('/api/cash-register/close', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Caixa fechado com sucesso!');
+                loadCashRegisterStatus();
+            } else {
+                alert(data.message || 'Erro ao fechar o caixa');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao fechar o caixa');
+        });
+    });
+
+    // Sangria
+    document.getElementById('withdrawalButton').addEventListener('click', function() {
+        const amount = prompt('Digite o valor da sangria:');
+        if (amount === null || amount === '') return;
+
+        const reason = prompt('Digite o motivo da sangria:');
+        if (reason === null || reason === '') return;
+
+        fetch('/api/cash-register/withdrawal', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                amount: parseFloat(amount),
+                description: reason
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Sangria realizada com sucesso!');
+                loadCashRegisterStatus();
+            } else {
+                alert(data.message || 'Erro ao realizar sangria');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao realizar sangria');
+        });
+    });
+
+    // Carregar status inicial do caixa
+    loadCashRegisterStatus();
 });
 </script>
 @endpush
