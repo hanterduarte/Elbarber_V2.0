@@ -34,22 +34,21 @@ class ProductController extends Controller
                 'cost' => 'nullable|numeric|min:0',
                 'stock' => 'nullable|integer|min:0',
                 'min_stock' => 'nullable|integer|min:0',
-                'is_active' => 'boolean'
+                'is_active' => 'boolean',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
-            // Converter valores monetários para float
-            $validated['price'] = (float) str_replace(['.', ','], ['', '.'], $validated['price']);
-            $validated['cost'] = isset($validated['cost']) ? (float) str_replace(['.', ','], ['', '.'], $validated['cost']) : 0;
+            // Converter valores monetários para decimal
+            $validated['price'] = (float) $validated['price'];
+            $validated['cost'] = isset($validated['cost']) ? (float) $validated['cost'] : 0;
 
-            $product = Product::create([
-                'name' => $validated['name'],
-                'description' => $validated['description'],
-                'price' => $validated['price'],
-                'cost' => $validated['cost'],
-                'stock' => $validated['stock'] ?? 0,
-                'min_stock' => $validated['min_stock'] ?? 0,
-                'is_active' => $request->boolean('is_active')
-            ]);
+            // Tratar upload de imagem
+            if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('products', 'public');
+                $validated['image'] = $path;
+            }
+
+            $product = Product::create($validated);
 
             Log::info('Produto criado com sucesso', ['product' => $product]);
 
@@ -58,6 +57,7 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             Log::error('Erro ao criar produto', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'data' => $request->all()
             ]);
 
@@ -92,22 +92,26 @@ class ProductController extends Controller
                 'cost' => 'nullable|numeric|min:0',
                 'stock' => 'nullable|integer|min:0',
                 'min_stock' => 'nullable|integer|min:0',
-                'is_active' => 'boolean'
+                'is_active' => 'boolean',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
             // Converter valores monetários para float
             $validated['price'] = (float) str_replace(['.', ','], ['', '.'], $validated['price']);
             $validated['cost'] = isset($validated['cost']) ? (float) str_replace(['.', ','], ['', '.'], $validated['cost']) : 0;
 
-            $product->update([
-                'name' => $validated['name'],
-                'description' => $validated['description'],
-                'price' => $validated['price'],
-                'cost' => $validated['cost'],
-                'stock' => $validated['stock'] ?? 0,
-                'min_stock' => $validated['min_stock'] ?? 0,
-                'is_active' => $request->boolean('is_active')
-            ]);
+            // Tratar upload de imagem
+            if ($request->hasFile('image')) {
+                // Excluir imagem antiga se existir
+                if ($product->image && Storage::disk('public')->exists($product->image)) {
+                    Storage::disk('public')->delete($product->image);
+                }
+                
+                $path = $request->file('image')->store('products', 'public');
+                $validated['image'] = $path;
+            }
+
+            $product->update($validated);
 
             Log::info('Produto atualizado com sucesso', ['product' => $product]);
 
@@ -192,24 +196,33 @@ class ProductController extends Controller
      */
     public function addStock(Request $request, Product $product)
     {
-        $request->validate([
-            'quantity' => 'required|integer|min:1'
-        ]);
-
         try {
-            DB::beginTransaction();
+            Log::info('Tentando adicionar estoque ao produto', [
+                'product_id' => $product->id,
+                'quantity' => $request->quantity
+            ]);
 
-            $product->stock += $request->quantity;
+            $validated = $request->validate([
+                'quantity' => 'required|integer|min:1'
+            ]);
+
+            $product->stock += $validated['quantity'];
             $product->save();
 
-            DB::commit();
+            Log::info('Estoque adicionado com sucesso', [
+                'product_id' => $product->id,
+                'new_stock' => $product->stock
+            ]);
 
-            return redirect()->route('products.low-stock')
-                ->with('success', "Estoque do produto {$product->name} atualizado com sucesso!");
+            return back()->with('success', 'Estoque adicionado com sucesso!');
         } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('products.low-stock')
-                ->with('error', 'Erro ao atualizar o estoque do produto. Por favor, tente novamente.');
+            Log::error('Erro ao adicionar estoque', [
+                'error' => $e->getMessage(),
+                'product_id' => $product->id,
+                'quantity' => $request->quantity
+            ]);
+
+            return back()->with('error', 'Erro ao adicionar estoque. Por favor, tente novamente.');
         }
     }
 } 

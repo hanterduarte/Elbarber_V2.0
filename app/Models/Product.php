@@ -16,18 +16,22 @@ class Product extends Model
         'cost',
         'stock',
         'min_stock',
-        'is_active'
+        'is_active',
+        'image'
     ];
 
     protected $casts = [
-        'price' => 'float',
-        'cost' => 'float',
-        'is_active' => 'boolean'
+        'price' => 'decimal:2',
+        'cost' => 'decimal:2',
+        'is_active' => 'boolean',
+        'stock' => 'integer',
+        'min_stock' => 'integer'
     ];
 
     protected $dates = [
         'created_at',
-        'updated_at'
+        'updated_at',
+        'deleted_at'
     ];
 
     public function saleItems()

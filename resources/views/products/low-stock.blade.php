@@ -121,4 +121,34 @@
         </div>
     </div>
 </div>
-@endsection 
+@endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manipular envio do formulário de adicionar estoque
+        const addStockForms = document.querySelectorAll('form[action*="add-stock"]');
+        addStockForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const quantity = this.querySelector('input[name="quantity"]').value;
+                if (!quantity || quantity < 1) {
+                    alert('Por favor, insira uma quantidade válida.');
+                    return;
+                }
+
+                // Fechar o modal após o envio
+                const modal = this.closest('.modal');
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                
+                this.submit();
+                
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            });
+        });
+    });
+</script>
+@endpush 

@@ -176,17 +176,46 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
-    // Confirmação de exclusão
-    document.querySelectorAll('[onclick*="delete-form"]').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (confirm('Tem certeza que deseja excluir este produto?')) {
-                const formId = this.getAttribute('onclick').match(/'([^']+)'/)[1];
-                document.getElementById(formId).submit();
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manipular envio do formulário de adicionar estoque
+        const addStockForms = document.querySelectorAll('form[action*="add-stock"]');
+        addStockForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const quantity = this.querySelector('input[name="quantity"]').value;
+                if (!quantity || quantity < 1) {
+                    alert('Por favor, insira uma quantidade válida.');
+                    return;
+                }
+
+                // Fechar o modal após o envio
+                const modal = this.closest('.modal');
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                
+                this.submit();
+                
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            });
+        });
+
+        // Manipular exclusão de produto
+        const deleteForms = document.querySelectorAll('form[id^="delete-form-"]');
+        deleteForms.forEach(form => {
+            const deleteButton = document.querySelector(`button[onclick="document.getElementById('${form.id}').submit();"]`);
+            if (deleteButton) {
+                deleteButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (confirm('Tem certeza que deseja excluir este produto?')) {
+                        form.submit();
+                    }
+                });
             }
         });
     });
 </script>
-@endsection 
+@endpush 

@@ -11,6 +11,18 @@
 
     <div class="card">
         <div class="card-body">
+            @if(session('success'))
+                <div class="alert alert-success">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <form action="{{ isset($product) ? route('products.update', $product) : route('products.store') }}" 
                   method="POST" 
                   enctype="multipart/form-data">
@@ -49,11 +61,12 @@
                             <label for="price" class="form-label">Preço <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
-                                <input type="text" 
+                                <input type="number" 
+                                       step="0.01" 
                                        class="form-control @error('price') is-invalid @enderror" 
                                        id="price" 
                                        name="price" 
-                                       value="{{ old('price', isset($product) ? number_format($product->price, 2, ',', '.') : '') }}" 
+                                       value="{{ old('price', $product->price ?? '') }}" 
                                        required>
                             </div>
                             @error('price')
@@ -65,11 +78,12 @@
                             <label for="cost" class="form-label">Custo</label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
-                                <input type="text" 
+                                <input type="number" 
+                                       step="0.01" 
                                        class="form-control @error('cost') is-invalid @enderror" 
                                        id="cost" 
                                        name="cost" 
-                                       value="{{ old('cost', isset($product) ? number_format($product->cost, 2, ',', '.') : '') }}">
+                                       value="{{ old('cost', $product->cost ?? '') }}">
                             </div>
                             @error('cost')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -157,38 +171,61 @@
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Formatação de valores monetários
-        const formatMoney = (element) => {
-            element.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                value = (parseFloat(value) / 100).toFixed(2);
-                value = value.replace('.', ',');
-                value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-                e.target.value = value;
-            });
-        };
-
+        const form = document.querySelector('form');
         const priceInput = document.getElementById('price');
         const costInput = document.getElementById('cost');
-        
-        if (priceInput) formatMoney(priceInput);
-        if (costInput) formatMoney(costInput);
 
-        // Adiciona listener para o formulário
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Função para formatar valor monetário
+        function formatCurrency(value) {
+            if (!value) return '';
             
-            // Converte os valores monetários para o formato correto antes do envio
-            const price = priceInput ? priceInput.value.replace(/\./g, '').replace(',', '.') : '';
-            const cost = costInput ? costInput.value.replace(/\./g, '').replace(',', '.') : '';
+            // Remove tudo que não é número
+            value = value.replace(/\D/g, '');
             
-            if (priceInput) priceInput.value = price;
-            if (costInput) costInput.value = cost;
+            // Converte para número e formata com 2 casas decimais
+            value = (parseFloat(value) / 100).toFixed(2);
             
-            // Envia o formulário
-            this.submit();
-        });
+            // Formata para o padrão brasileiro
+            return value.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        // Função para converter valor do formato brasileiro para o formato do backend
+        function convertToBackendFormat(value) {
+            if (!value) return '0';
+            return value.replace(/\./g, '').replace(',', '.');
+        }
+
+        // Formata os valores monetários durante a digitação
+        if (priceInput) {
+            priceInput.addEventListener('input', function(e) {
+                e.target.value = formatCurrency(e.target.value);
+            });
+        }
+
+        if (costInput) {
+            costInput.addEventListener('input', function(e) {
+                e.target.value = formatCurrency(e.target.value);
+            });
+        }
+
+        // Trata o envio do formulário
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Converte os valores para o formato do backend
+                if (priceInput) {
+                    priceInput.value = convertToBackendFormat(priceInput.value);
+                }
+                
+                if (costInput && costInput.value) {
+                    costInput.value = convertToBackendFormat(costInput.value);
+                }
+
+                // Envia o formulário
+                form.submit();
+            });
+        }
     });
 </script>
 @endsection 

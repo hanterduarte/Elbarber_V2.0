@@ -30,9 +30,9 @@ class ClientController extends Controller
             Log::info('Tentativa de criar novo cliente', ['data' => $request->all()]);
 
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
                 'email' => 'required|email|max:255|unique:clients,email',
-                'phone' => 'required|string|max:20',
+            'phone' => 'required|string|max:20',
                 'birth_date' => 'required|date',
                 'address' => 'nullable|string|max:255',
                 'city' => 'nullable|string|max:100',
@@ -111,9 +111,9 @@ class ClientController extends Controller
             ]);
 
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
                 'email' => 'required|email|max:255|unique:clients,email,' . $client->id,
-                'phone' => 'required|string|max:20',
+            'phone' => 'required|string|max:20',
                 'birth_date' => 'required|date',
                 'address' => 'nullable|string|max:255',
                 'city' => 'nullable|string|max:100',
@@ -177,7 +177,7 @@ class ClientController extends Controller
     {
         try {
             Log::info('Tentativa de excluir cliente', ['client_id' => $client->id]);
-            $client->delete();
+        $client->delete();
             Log::info('Cliente excluído com sucesso', ['client_id' => $client->id]);
             return redirect()
                 ->route('clients.index')
