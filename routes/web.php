@@ -43,17 +43,17 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Usuários
-    Route::resource('users', UserController::class);
-    Route::get('users/{user}/roles', [UserController::class, 'roles'])->name('users.roles');
-    Route::post('users/{user}/roles', [UserController::class, 'assignRoles'])->name('users.assign-roles');
+    Route::resource('users', UserController::class)->middleware('check-permission:manage_users');
+    Route::get('users/{user}/roles', [UserController::class, 'roles'])->middleware('check-permission:manage_users')->name('users.roles');
+    Route::post('users/{user}/roles', [UserController::class, 'assignRoles'])->middleware('check-permission:manage_users')->name('users.assign-roles');
 
     // Roles
-    Route::resource('roles', RoleController::class);
-    Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions');
-    Route::post('roles/{role}/permissions', [RoleController::class, 'assignPermissions'])->name('roles.assign-permissions');
+    Route::resource('roles', RoleController::class)->middleware('check-permission:manage_roles');
+    Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->middleware('check-permission:manage_roles')->name('roles.permissions');
+    Route::post('roles/{role}/permissions', [RoleController::class, 'assignPermissions'])->middleware('check-permission:manage_roles')->name('roles.assign-permissions');
 
     // Permissões
-    Route::resource('permissions', PermissionController::class);
+    Route::resource('permissions', PermissionController::class)->middleware('check-permission:manage_permissions');
 
     // Clientes
     Route::resource('clients', ClientController::class);
@@ -110,4 +110,25 @@ Route::middleware(['auth'])->group(function () {
     // PDV
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
     Route::post('/pos/sale', [PosController::class, 'store'])->name('pos.store');
+});
+
+// Rotas de Permissões
+Route::middleware(['auth'])->group(function () {
+    Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:manage settings')->name('permissions.index');
+    Route::put('/permissions/{role}', [PermissionController::class, 'updateRolePermissions'])->middleware('permission:manage settings')->name('permissions.update');
+    Route::post('/permissions/sync', [PermissionController::class, 'syncDefaultPermissions'])->middleware('permission:manage settings')->name('permissions.sync');
+});
+
+// Rotas de Roles
+Route::middleware(['auth'])->group(function () {
+    Route::resource('roles', RoleController::class)->middleware('permission:manage settings');
+    Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->middleware('permission:manage settings')->name('roles.permissions');
+    Route::post('roles/{role}/permissions', [RoleController::class, 'assignPermissions'])->middleware('permission:manage settings')->name('roles.assign-permissions');
+});
+
+// Rotas de Usuários
+Route::middleware(['auth'])->group(function () {
+    Route::resource('users', UserController::class)->middleware('permission:view users');
+    Route::get('users/{user}/roles', [UserController::class, 'roles'])->middleware('permission:edit users')->name('users.roles');
+    Route::post('users/{user}/roles', [UserController::class, 'assignRoles'])->middleware('permission:edit users')->name('users.assign-roles');
 }); 

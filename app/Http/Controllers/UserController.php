@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -11,10 +12,7 @@ class UserController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('permission:users.index')->only('index');
-        $this->middleware('permission:users.create')->only(['create', 'store']);
-        $this->middleware('permission:users.edit')->only(['edit', 'update']);
-        $this->middleware('permission:users.destroy')->only('destroy');
+        $this->middleware('check-permission:manage_users')->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     }
 
     public function index()
@@ -25,7 +23,7 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles = \Spatie\Permission\Models\Role::all();
+        $roles = Role::all();
         return view('users.create', compact('roles'));
     }
 
@@ -57,7 +55,7 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $roles = \Spatie\Permission\Models\Role::all();
+        $roles = Role::all();
         return view('users.edit', compact('user', 'roles'));
     }
 

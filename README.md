@@ -24,60 +24,32 @@ O Elbarber é um sistema de gerenciamento completo para barbearias, desenvolvido
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/Elbarber_V2.0.git
-cd elbarber
+git clone https://github.com/seu-usuario/elbarber.git
 ```
 
-2. Instale as dependências do PHP:
+2. Instale as dependências do Composer:
 ```bash
 composer install
 ```
 
-3. Instale o pacote spatie/laravel-permission:
-```bash
-composer require spatie/laravel-permission
-```
-
-4. Crie a tabela de cache:
-```bash
-php artisan cache:table
-```
-
-5. Configure o arquivo .env:
+3. Copie o arquivo de ambiente:
 ```bash
 cp .env.example .env
 ```
-Edite o arquivo .env com suas configurações de banco de dados:
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=elbarber
-DB_USERNAME=seu_usuario
-DB_PASSWORD=sua_senha
-```
 
-6. Gere a chave da aplicação:
+4. Configure o banco de dados no arquivo .env
+
+5. Gere a chave da aplicação:
 ```bash
 php artisan key:generate
 ```
 
-7. Execute as migrações e seeders:
+6. Execute as migrações e seeders:
 ```bash
-php artisan migrate:fresh --seed
+php artisan migrate --seed
 ```
 
-8. Crie o link simbólico para o armazenamento:
-```bash
-php artisan storage:link
-```
-
-9. Configure as permissões das pastas de armazenamento:
-```bash
-chmod -R 775 storage bootstrap/cache
-```
-
-10. Inicie o servidor de desenvolvimento:
+7. Inicie o servidor:
 ```bash
 php artisan serve
 ```

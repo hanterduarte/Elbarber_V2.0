@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -28,17 +28,17 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission, 'guard_name' => 'web']);
+            Permission::create(['name' => $permission]);
         }
 
         // Criar roles
-        $adminRole = Role::create(['name' => 'admin', 'guard_name' => 'web']);
-        $managerRole = Role::create(['name' => 'manager', 'guard_name' => 'web']);
-        $barberRole = Role::create(['name' => 'barber', 'guard_name' => 'web']);
-        $receptionistRole = Role::create(['name' => 'receptionist', 'guard_name' => 'web']);
+        $adminRole = Role::create(['name' => 'admin', 'description' => 'Administrador do sistema']);
+        $managerRole = Role::create(['name' => 'manager', 'description' => 'Gerente da barbearia']);
+        $barberRole = Role::create(['name' => 'barber', 'description' => 'Barbeiro']);
+        $receptionistRole = Role::create(['name' => 'receptionist', 'description' => 'Recepcionista']);
 
         // Atribuir permissões aos roles
-        $adminRole->givePermissionTo($permissions);
+        $adminRole->permissions()->sync(Permission::pluck('id')->toArray());
         
         $managerPermissions = [
             'clients.index', 'clients.create', 'clients.edit', 'clients.destroy',
@@ -50,14 +50,14 @@ class DatabaseSeeder extends Seeder
             'cash_register.index', 'cash_register.create', 'cash_register.edit', 'cash_register.destroy',
             'reports.index'
         ];
-        $managerRole->givePermissionTo($managerPermissions);
+        $managerRole->permissions()->sync(Permission::whereIn('name', $managerPermissions)->pluck('id')->toArray());
 
         $barberPermissions = [
             'clients.index',
             'appointments.index', 'appointments.create', 'appointments.edit',
             'services.index'
         ];
-        $barberRole->givePermissionTo($barberPermissions);
+        $barberRole->permissions()->sync(Permission::whereIn('name', $barberPermissions)->pluck('id')->toArray());
 
         $receptionistPermissions = [
             'clients.index', 'clients.create', 'clients.edit',
@@ -65,7 +65,7 @@ class DatabaseSeeder extends Seeder
             'services.index',
             'sales.index', 'sales.create'
         ];
-        $receptionistRole->givePermissionTo($receptionistPermissions);
+        $receptionistRole->permissions()->sync(Permission::whereIn('name', $receptionistPermissions)->pluck('id')->toArray());
 
         // Criar usuários
         $admin = User::create([

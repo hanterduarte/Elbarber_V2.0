@@ -2,70 +2,114 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PermissionController extends Controller
 {
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('permission:permissions.index')->only('index');
-        $this->middleware('permission:permissions.create')->only(['create', 'store']);
-        $this->middleware('permission:permissions.edit')->only(['edit', 'update']);
-        $this->middleware('permission:permissions.destroy')->only('destroy');
+        $this->middleware('permission:manage settings');
     }
 
     public function index()
     {
-        $permissions = Permission::paginate(10);
-        return view('permissions.index', compact('permissions'));
+        $roles = Role::with('permissions')->get();
+        $permissions = Permission::all();
+        
+        return view('permissions.index', compact('roles', 'permissions'));
     }
 
-    public function create()
+    public function updateRolePermissions(Request $request, Role $role)
     {
-        return view('permissions.create');
+        try {
+            DB::beginTransaction();
+
+            $permissions = $request->input('permissions', []);
+            $role->permissions()->sync($permissions);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Permissões atualizadas com sucesso!'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao atualizar permissões: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao atualizar permissões. Por favor, tente novamente.'
+            ], 500);
+        }
     }
 
-    public function store(Request $request)
+    public function syncDefaultPermissions()
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:permissions',
-        ]);
+        try {
+            DB::beginTransaction();
 
-        Permission::create($request->all());
+            // Criar permissões padrão
+            foreach (Permission::defaultPermissions() as $permission) {
+                Permission::firstOrCreate(['name' => $permission]);
+            }
 
-        return redirect()->route('permissions.index')
-            ->with('success', 'Permissão criada com sucesso.');
-    }
+            // Criar roles padrão
+            $adminRole = Role::firstOrCreate(['name' => 'admin']);
+            $managerRole = Role::firstOrCreate(['name' => 'manager']);
+            $barberRole = Role::firstOrCreate(['name' => 'barber']);
+            $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
 
-    public function show(Permission $permission)
-    {
-        return view('permissions.show', compact('permission'));
-    }
+            // Atribuir todas as permissões ao admin
+            $adminRole->permissions()->sync(Permission::pluck('id'));
 
-    public function edit(Permission $permission)
-    {
-        return view('permissions.edit', compact('permission'));
-    }
+            // Atribuir permissões específicas aos outros roles
+            $managerPermissions = Permission::whereIn('name', [
+                'view users', 'create users', 'edit users',
+                'view clients', 'create clients', 'edit clients',
+                'view barbers', 'create barbers', 'edit barbers',
+                'view services', 'create services', 'edit services',
+                'view products', 'create products', 'edit products',
+                'view appointments', 'create appointments', 'edit appointments',
+                'view sales', 'create sales', 'edit sales',
+                'view cash register', 'open cash register', 'close cash register',
+                'view reports'
+            ])->pluck('id');
+            $managerRole->permissions()->sync($managerPermissions);
 
-    public function update(Request $request, Permission $permission)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:permissions,name,' . $permission->id,
-        ]);
+            $barberPermissions = Permission::whereIn('name', [
+                'view clients',
+                'view services',
+                'view appointments', 'create appointments', 'edit appointments',
+                'view sales', 'create sales'
+            ])->pluck('id');
+            $barberRole->permissions()->sync($barberPermissions);
 
-        $permission->update($request->all());
+            $cashierPermissions = Permission::whereIn('name', [
+                'view clients',
+                'view services',
+                'view products',
+                'view appointments',
+                'view sales', 'create sales',
+                'view cash register', 'open cash register', 'close cash register'
+            ])->pluck('id');
+            $cashierRole->permissions()->sync($cashierPermissions);
 
-        return redirect()->route('permissions.index')
-            ->with('success', 'Permissão atualizada com sucesso.');
-    }
+            DB::commit();
 
-    public function destroy(Permission $permission)
-    {
-        $permission->delete();
-
-        return redirect()->route('permissions.index')
-            ->with('success', 'Permissão excluída com sucesso.');
+            return redirect()->route('permissions.index')
+                ->with('success', 'Permissões sincronizadas com sucesso!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao sincronizar permissões: ' . $e->getMessage());
+            
+            return redirect()->route('permissions.index')
+                ->with('error', 'Erro ao sincronizar permissões. Por favor, tente novamente.');
+        }
     }
 } 

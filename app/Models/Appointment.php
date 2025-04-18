@@ -11,38 +11,41 @@ class Appointment extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'barber_id',
         'client_id',
-        'date',
-        'time',
+        'barber_id',
+        'start_time',
+        'end_time',
         'status',
         'notes'
     ];
 
     protected $dates = [
-        'date',
+        'start_time',
+        'end_time',
         'created_at',
         'updated_at',
         'deleted_at'
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
         'status' => 'string'
     ];
-
-    public function barber()
-    {
-        return $this->belongsTo(Barber::class);
-    }
 
     public function client()
     {
         return $this->belongsTo(Client::class);
     }
 
+    public function barber()
+    {
+        return $this->belongsTo(User::class, 'barber_id');
+    }
+
     public function services()
     {
-        return $this->belongsToMany(Service::class, 'appointment_service');
+        return $this->belongsToMany(Service::class, 'appointment_service')
+            ->withTimestamps();
     }
 } 

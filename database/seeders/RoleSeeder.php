@@ -3,154 +3,80 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 
 class RoleSeeder extends Seeder
 {
     public function run()
     {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
-
-        // Criar permissões
+        // Criar permissões padrão
         $permissions = [
-            // Usuários
-            'view users',
-            'create users',
-            'edit users',
-            'delete users',
-            // Funções
-            'view roles',
-            'create roles',
-            'edit roles',
-            'delete roles',
-            // Permissões
-            'view permissions',
-            'create permissions',
-            'edit permissions',
-            'delete permissions',
-            // Clientes
-            'view clients',
-            'create clients',
-            'edit clients',
-            'delete clients',
-            // Barbeiros
-            'view barbers',
-            'create barbers',
-            'edit barbers',
-            'delete barbers',
-            // Serviços
-            'view services',
-            'create services',
-            'edit services',
-            'delete services',
-            // Produtos
-            'view products',
-            'create products',
-            'edit products',
-            'delete products',
-            // Agendamentos
-            'view appointments',
-            'create appointments',
-            'edit appointments',
-            'delete appointments',
-            // Vendas
-            'view sales',
-            'create sales',
-            'edit sales',
-            'delete sales',
-            // Caixa
-            'view cash register',
-            'open cash register',
-            'close cash register',
-            'view cash register movements',
-            'create cash register movements',
-            'edit cash register movements',
-            'delete cash register movements',
-            // Relatórios
-            'view reports',
+            'users.index', 'users.create', 'users.edit', 'users.destroy',
+            'roles.index', 'roles.create', 'roles.edit', 'roles.destroy',
+            'permissions.index', 'permissions.create', 'permissions.edit', 'permissions.destroy',
+            'clients.index', 'clients.create', 'clients.edit', 'clients.destroy',
+            'barbers.index', 'barbers.create', 'barbers.edit', 'barbers.destroy',
+            'services.index', 'services.create', 'services.edit', 'services.destroy',
+            'products.index', 'products.create', 'products.edit', 'products.destroy',
+            'appointments.index', 'appointments.create', 'appointments.edit', 'appointments.destroy',
+            'sales.index', 'sales.create', 'sales.edit', 'sales.destroy',
+            'cash_register.index', 'cash_register.create', 'cash_register.edit', 'cash_register.destroy',
+            'reports.index'
         ];
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Criar roles e atribuir permissões
+        // Criar roles
         $roles = [
-            'admin' => Permission::all(),
+            'admin' => [
+                'description' => 'Administrador do sistema',
+                'permissions' => Permission::pluck('id')->toArray()
+            ],
             'manager' => [
-                'view users',
-                'create users',
-                'edit users',
-                'view roles',
-                'view permissions',
-                'view clients',
-                'create clients',
-                'edit clients',
-                'delete clients',
-                'view barbers',
-                'create barbers',
-                'edit barbers',
-                'delete barbers',
-                'view services',
-                'create services',
-                'edit services',
-                'delete services',
-                'view products',
-                'create products',
-                'edit products',
-                'delete products',
-                'view appointments',
-                'create appointments',
-                'edit appointments',
-                'delete appointments',
-                'view sales',
-                'create sales',
-                'edit sales',
-                'delete sales',
-                'view cash register',
-                'open cash register',
-                'close cash register',
-                'view cash register movements',
-                'create cash register movements',
-                'edit cash register movements',
-                'delete cash register movements',
-                'view reports',
+                'description' => 'Gerente da barbearia',
+                'permissions' => [
+                    'clients.index', 'clients.create', 'clients.edit', 'clients.destroy',
+                    'barbers.index', 'barbers.create', 'barbers.edit', 'barbers.destroy',
+                    'services.index', 'services.create', 'services.edit', 'services.destroy',
+                    'products.index', 'products.create', 'products.edit', 'products.destroy',
+                    'appointments.index', 'appointments.create', 'appointments.edit', 'appointments.destroy',
+                    'sales.index', 'sales.create', 'sales.edit', 'sales.destroy',
+                    'cash_register.index', 'cash_register.create', 'cash_register.edit', 'cash_register.destroy',
+                    'reports.index'
+                ]
             ],
             'barber' => [
-                'view clients',
-                'create clients',
-                'edit clients',
-                'view services',
-                'view products',
-                'view appointments',
-                'create appointments',
-                'edit appointments',
-                'view sales',
-                'create sales',
-                'view cash register',
-                'view cash register movements',
+                'description' => 'Barbeiro',
+                'permissions' => [
+                    'clients.index',
+                    'appointments.index', 'appointments.create', 'appointments.edit',
+                    'services.index'
+                ]
             ],
             'receptionist' => [
-                'view clients',
-                'create clients',
-                'edit clients',
-                'view services',
-                'view products',
-                'view appointments',
-                'create appointments',
-                'edit appointments',
-                'view sales',
-                'create sales',
-                'view cash register',
-                'view cash register movements',
-            ],
+                'description' => 'Recepcionista',
+                'permissions' => [
+                    'clients.index', 'clients.create', 'clients.edit',
+                    'appointments.index', 'appointments.create', 'appointments.edit',
+                    'services.index',
+                    'sales.index', 'sales.create'
+                ]
+            ]
         ];
 
-        foreach ($roles as $role => $permissions) {
-            $role = Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-            $role->syncPermissions($permissions);
+        foreach ($roles as $roleName => $roleData) {
+            $role = Role::firstOrCreate([
+                'name' => $roleName,
+                'description' => $roleData['description']
+            ]);
+
+            if (is_array($roleData['permissions'])) {
+                $permissionIds = Permission::whereIn('name', $roleData['permissions'])->pluck('id')->toArray();
+                $role->permissions()->sync($permissionIds);
+            }
         }
     }
 } 

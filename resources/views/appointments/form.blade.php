@@ -10,11 +10,27 @@
                 </div>
 
                 <div class="card-body">
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="alert alert-danger">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     @if (isset($appointment))
-                        <form action="{{ route('appointments.update', $appointment) }}" method="POST">
+                        <form action="{{ route('appointments.update', $appointment) }}" method="POST" id="appointment-form">
                         @method('PUT')
                     @else
-                        <form action="{{ route('appointments.store') }}" method="POST">
+                        <form action="{{ route('appointments.store') }}" method="POST" id="appointment-form">
                     @endif
                         @csrf
 
@@ -61,14 +77,14 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="date" class="form-label">Data e Hora <span class="text-danger">*</span></label>
+                            <label for="start_time" class="form-label">Data e Hora <span class="text-danger">*</span></label>
                             <input type="datetime-local" 
-                                   class="form-control @error('date') is-invalid @enderror" 
-                                   id="date" 
-                                   name="date" 
-                                   value="{{ old('date', isset($appointment) ? $appointment->date->format('Y-m-d\TH:i') : '') }}" 
+                                   class="form-control @error('start_time') is-invalid @enderror" 
+                                   id="start_time" 
+                                   name="start_time" 
+                                   value="{{ old('start_time', isset($appointment) ? $appointment->start_time->format('Y-m-d\TH:i') : '') }}" 
                                    required>
-                            @error('date')
+                            @error('start_time')
                                 <div class="invalid-feedback">
                                     {{ $message }}
                                 </div>
@@ -81,14 +97,15 @@
                                 @foreach($services as $service)
                                     <div class="col-md-6">
                                         <div class="form-check">
-                                            <input class="form-check-input" 
+                                            <input class="form-check-input service-checkbox" 
                                                    type="checkbox" 
                                                    name="services[]" 
                                                    value="{{ $service->id }}" 
                                                    id="service_{{ $service->id }}"
-                                                   {{ isset($appointment) && $appointment->services->contains($service->id) ? 'checked' : '' }}>
+                                                   {{ in_array($service->id, old('services', isset($appointment) ? $appointment->services->pluck('id')->toArray() : [])) ? 'checked' : '' }}>
                                             <label class="form-check-label" for="service_{{ $service->id }}">
                                                 {{ $service->name }} - R$ {{ number_format($service->price, 2, ',', '.') }}
+                                                <small class="text-muted">({{ $service->duration }} min)</small>
                                             </label>
                                         </div>
                                     </div>
@@ -116,10 +133,26 @@
 
                         <div class="d-flex justify-content-end gap-2">
                             <a href="{{ route('appointments.index') }}" class="btn btn-secondary">Cancelar</a>
-                            <button type="submit" class="btn btn-primary">Salvar</button>
+                            <button type="submit" class="btn btn-primary" id="submit-button">Salvar</button>
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Erro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="errorModalBody">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
@@ -129,48 +162,61 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form');
-    const submitButton = form.querySelector('button[type="submit"]');
+    const form = document.getElementById('appointment-form');
+    const submitButton = document.getElementById('submit-button');
+    const serviceCheckboxes = document.querySelectorAll('.service-checkbox');
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
 
         // Validar se pelo menos um serviço foi selecionado
-        const services = form.querySelectorAll('input[name="services[]"]:checked');
-        if (services.length === 0) {
-            alert('Selecione pelo menos um serviço!');
+        const selectedServices = Array.from(serviceCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+
+        if (selectedServices.length === 0) {
+            showError('Selecione pelo menos um serviço!');
             return;
         }
 
         // Desabilitar o botão para evitar múltiplos envios
         submitButton.disabled = true;
-        submitButton.innerHTML = 'Salvando...';
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
+
+        // Criar FormData com todos os campos do formulário
+        const formData = new FormData(form);
+        
+        // Log dos dados que serão enviados
+        console.log('Dados do formulário:', {
+            client_id: formData.get('client_id'),
+            barber_id: formData.get('barber_id'),
+            start_time: formData.get('start_time'),
+            services: formData.getAll('services[]'),
+            notes: formData.get('notes')
+        });
 
         // Enviar o formulário
         fetch(form.action, {
             method: form.method,
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'Accept': 'application/json'
             },
-            body: JSON.stringify(Object.fromEntries(new FormData(form)))
+            body: formData
         })
         .then(response => {
+            console.log('Response status:', response.status);
             if (!response.ok) {
-                return response.text().then(text => {
-                    try {
-                        const json = JSON.parse(text);
-                        throw new Error(json.message || 'Erro ao salvar agendamento.');
-                    } catch (e) {
-                        console.error('Resposta do servidor:', text);
-                        throw new Error('Erro ao salvar agendamento. Por favor, tente novamente.');
-                    }
+                return response.json().then(data => {
+                    console.log('Error response:', data);
+                    throw new Error(data.message || 'Erro ao salvar agendamento.');
                 });
             }
             return response.json();
         })
         .then(data => {
+            console.log('Success response:', data);
             if (data.success) {
                 window.location.href = data.redirect || '{{ route('appointments.index') }}';
             } else {
@@ -179,11 +225,16 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert(error.message);
+            showError(error.message || 'Erro ao salvar agendamento. Por favor, tente novamente.');
             submitButton.disabled = false;
             submitButton.innerHTML = 'Salvar';
         });
     });
+
+    function showError(message) {
+        document.getElementById('errorModalBody').textContent = message;
+        errorModal.show();
+    }
 });
 </script>
 @endpush 
