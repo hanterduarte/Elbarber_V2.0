@@ -14,6 +14,7 @@ class BarberSeeder extends Seeder
         $barbershop = Barbershop::first();
         $barberUser = User::where('email', 'barbeiro@elbarber.com')->first();
 
+        // Criar o barbeiro associado ao usuário barbeiro
         Barber::create([
             'user_id' => $barberUser->id,
             'barbershop_id' => $barbershop->id,
@@ -24,38 +25,36 @@ class BarberSeeder extends Seeder
             'is_active' => true
         ]);
 
-        // Create additional barbers
-        $barbers = [
+        // Criar usuários adicionais para os outros barbeiros
+        $users = [
             [
-                'name' => 'João Silva',
-                'email' => 'joao@elbarber.com',
-                'phone' => '(11) 97777-7777',
-                'specialties' => ['Corte masculino', 'Pigmentação']
+                'name' => 'Carlos Silva',
+                'email' => 'carlos@example.com',
+                'password' => bcrypt('password'),
             ],
             [
-                'name' => 'Pedro Santos',
-                'email' => 'pedro@elbarber.com',
-                'phone' => '(11) 96666-6666',
-                'specialties' => ['Barba', 'Hidratação']
-            ]
+                'name' => 'Roberto Santos',
+                'email' => 'roberto@example.com',
+                'password' => bcrypt('password'),
+            ],
+            [
+                'name' => 'Marcos Oliveira',
+                'email' => 'marcos@example.com',
+                'password' => bcrypt('password'),
+            ],
         ];
 
-        foreach ($barbers as $barberData) {
-            $user = User::create([
-                'name' => $barberData['name'],
-                'email' => $barberData['email'],
-                'password' => bcrypt('password')
-            ]);
-
+        foreach ($users as $userData) {
+            $user = User::create($userData);
             $user->assignRole('barber');
 
             Barber::create([
                 'user_id' => $user->id,
                 'barbershop_id' => $barbershop->id,
-                'name' => $barberData['name'],
-                'email' => $barberData['email'],
-                'phone' => $barberData['phone'],
-                'specialties' => $barberData['specialties'],
+                'name' => $userData['name'],
+                'email' => $userData['email'],
+                'phone' => '(11) 99999-9999',
+                'specialties' => ['Corte de cabelo', 'Barba'],
                 'is_active' => true
             ]);
         }

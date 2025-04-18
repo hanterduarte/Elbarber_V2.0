@@ -16,6 +16,8 @@ return new class extends Migration
             $table->dateTime('end_time');
             $table->enum('status', ['scheduled', 'confirmed', 'completed', 'cancelled'])->default('scheduled');
             $table->text('notes')->nullable();
+            $table->decimal('total', 10, 2);
+            $table->integer('duration');
             $table->timestamps();
             $table->softDeletes();
         });

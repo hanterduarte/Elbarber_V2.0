@@ -86,7 +86,7 @@
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
-                                    <th>Serviço</th>
+                                    <th>Serviços</th>
                                     <th>Data/Hora</th>
                                     <th>Status</th>
                                 </tr>
@@ -95,11 +95,15 @@
                                 @forelse($upcomingAppointments as $appointment)
                                     <tr>
                                         <td>{{ $appointment->client->name }}</td>
-                                        <td>{{ $appointment->service->name }}</td>
+                                        <td>
+                                            @foreach($appointment->services as $service)
+                                                {{ $service->name }}@if(!$loop->last), @endif
+                                            @endforeach
+                                        </td>
                                         <td>{{ $appointment->start_time->format('d/m/Y H:i') }}</td>
                                         <td>
                                             @switch($appointment->status)
-                                                @case('pending')
+                                                @case('scheduled')
                                                     <span class="badge bg-warning">Pendente</span>
                                                     @break
                                                 @case('confirmed')
@@ -116,7 +120,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center">Nenhum agendamento encontrado.</td>
+                                        <td colspan="4" class="text-center">Nenhum agendamento encontrado</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -145,11 +149,11 @@
                                 @forelse($lowStockProducts as $product)
                                     <tr>
                                         <td>{{ $product->name }}</td>
-                                        <td>{{ $product->quantity }}</td>
+                                        <td>{{ $product->stock }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="2" class="text-center">Nenhum produto com estoque baixo.</td>
+                                        <td colspan="2" class="text-center">Nenhum produto com estoque baixo</td>
                                     </tr>
                                 @endforelse
                             </tbody>

@@ -3,113 +3,69 @@
 namespace App\Http\Controllers;
 
 use App\Models\Permission;
-use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PermissionController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('permission:manage settings');
-    }
-
     public function index()
     {
-        $roles = Role::with('permissions')->get();
-        $permissions = Permission::all();
-        
-        return view('permissions.index', compact('roles', 'permissions'));
+        $permissions = Permission::orderBy('module')->orderBy('name')->get();
+        return view('permissions.index', compact('permissions'));
     }
 
-    public function updateRolePermissions(Request $request, Role $role)
+    public function create()
     {
-        try {
-            DB::beginTransaction();
-
-            $permissions = $request->input('permissions', []);
-            $role->permissions()->sync($permissions);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Permissões atualizadas com sucesso!'
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Erro ao atualizar permissões: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao atualizar permissões. Por favor, tente novamente.'
-            ], 500);
-        }
+        return view('permissions.create');
     }
 
-    public function syncDefaultPermissions()
+    public function store(Request $request)
     {
-        try {
-            DB::beginTransaction();
+        $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:permissions'],
+            'description' => ['nullable', 'string'],
+            'module' => ['required', 'string', 'max:255'],
+        ]);
 
-            // Criar permissões padrão
-            foreach (Permission::defaultPermissions() as $permission) {
-                Permission::firstOrCreate(['name' => $permission]);
-            }
+        Permission::create([
+            'name' => $request->name,
+            'description' => $request->description,
+            'module' => $request->module,
+        ]);
 
-            // Criar roles padrão
-            $adminRole = Role::firstOrCreate(['name' => 'admin']);
-            $managerRole = Role::firstOrCreate(['name' => 'manager']);
-            $barberRole = Role::firstOrCreate(['name' => 'barber']);
-            $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
+        return redirect()->route('permissions.index')->with('success', 'Permission created successfully.');
+    }
 
-            // Atribuir todas as permissões ao admin
-            $adminRole->permissions()->sync(Permission::pluck('id'));
+    public function edit(Permission $permission)
+    {
+        return view('permissions.edit', compact('permission'));
+    }
 
-            // Atribuir permissões específicas aos outros roles
-            $managerPermissions = Permission::whereIn('name', [
-                'view users', 'create users', 'edit users',
-                'view clients', 'create clients', 'edit clients',
-                'view barbers', 'create barbers', 'edit barbers',
-                'view services', 'create services', 'edit services',
-                'view products', 'create products', 'edit products',
-                'view appointments', 'create appointments', 'edit appointments',
-                'view sales', 'create sales', 'edit sales',
-                'view cash register', 'open cash register', 'close cash register',
-                'view reports'
-            ])->pluck('id');
-            $managerRole->permissions()->sync($managerPermissions);
+    public function update(Request $request, Permission $permission)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:permissions,name,' . $permission->id],
+            'description' => ['nullable', 'string'],
+            'module' => ['required', 'string', 'max:255'],
+        ]);
 
-            $barberPermissions = Permission::whereIn('name', [
-                'view clients',
-                'view services',
-                'view appointments', 'create appointments', 'edit appointments',
-                'view sales', 'create sales'
-            ])->pluck('id');
-            $barberRole->permissions()->sync($barberPermissions);
+        $permission->update([
+            'name' => $request->name,
+            'description' => $request->description,
+            'module' => $request->module,
+        ]);
 
-            $cashierPermissions = Permission::whereIn('name', [
-                'view clients',
-                'view services',
-                'view products',
-                'view appointments',
-                'view sales', 'create sales',
-                'view cash register', 'open cash register', 'close cash register'
-            ])->pluck('id');
-            $cashierRole->permissions()->sync($cashierPermissions);
+        return redirect()->route('permissions.index')->with('success', 'Permission updated successfully.');
+    }
 
-            DB::commit();
+    public function destroy(Permission $permission)
+    {
+        $permission->delete();
+        return redirect()->route('permissions.index')->with('success', 'Permission deleted successfully.');
+    }
 
-            return redirect()->route('permissions.index')
-                ->with('success', 'Permissões sincronizadas com sucesso!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Erro ao sincronizar permissões: ' . $e->getMessage());
-            
-            return redirect()->route('permissions.index')
-                ->with('error', 'Erro ao sincronizar permissões. Por favor, tente novamente.');
-        }
+    public function toggleStatus(Permission $permission)
+    {
+        $permission->update(['active' => !$permission->active]);
+        return redirect()->route('permissions.index')->with('success', 'Permission status updated successfully.');
     }
 } 

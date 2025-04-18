@@ -36,5 +36,15 @@ class BarbershopSeeder extends Seeder
         foreach ($barbershops as $barbershop) {
             Barbershop::create($barbershop);
         }
+
+        Barbershop::create([
+            'name' => 'ElBarber',
+            'address' => 'Rua Principal, 123',
+            'phone' => '(11) 99999-9999',
+            'email' => 'contato@elbarber.com',
+            'cnpj' => '12.345.678/0001-90',
+            'logo' => null,
+            'is_active' => true,
+        ]);
     }
 } 

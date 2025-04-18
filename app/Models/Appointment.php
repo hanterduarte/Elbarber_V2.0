@@ -16,21 +16,15 @@ class Appointment extends Model
         'start_time',
         'end_time',
         'status',
-        'notes'
-    ];
-
-    protected $dates = [
-        'start_time',
-        'end_time',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'notes',
+        'total',
+        'duration'
     ];
 
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
-        'status' => 'string'
+        'total' => 'decimal:2',
     ];
 
     public function client()
@@ -40,12 +34,18 @@ class Appointment extends Model
 
     public function barber()
     {
-        return $this->belongsTo(User::class, 'barber_id');
+        return $this->belongsTo(Barber::class);
     }
 
     public function services()
     {
         return $this->belongsToMany(Service::class, 'appointment_service')
+            ->withPivot('price', 'duration')
             ->withTimestamps();
+    }
+
+    public function payments()
+    {
+        return $this->hasManyThrough(SalePayment::class, Sale::class);
     }
 } 

@@ -6,12 +6,12 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Funções</span>
-                    @can('roles.create')
+                    <h5 class="mb-0">Roles</h5>
+                    @if(auth()->user()->hasPermission('manage_roles'))
                         <a href="{{ route('roles.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Nova Função
+                            <i class="fas fa-plus"></i> New Role
                         </a>
-                    @endcan
+                    @endif
                 </div>
 
                 <div class="card-body">
@@ -25,40 +25,49 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>Permissões</th>
-                                    <th>Ações</th>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Permissions</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($roles as $role)
                                     <tr>
                                         <td>{{ $role->name }}</td>
+                                        <td>{{ $role->description }}</td>
                                         <td>
                                             @foreach($role->permissions as $permission)
-                                                <span class="badge bg-primary">{{ $permission->name }}</span>
+                                                <span class="badge bg-info">{{ $permission->name }}</span>
                                             @endforeach
                                         </td>
                                         <td>
-                                            @can('roles.show')
-                                                <a href="{{ route('roles.show', $role->id) }}" class="btn btn-info btn-sm">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                            @endcan
-                                            @can('roles.edit')
-                                                <a href="{{ route('roles.edit', $role->id) }}" class="btn btn-primary btn-sm">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            @endcan
-                                            @can('roles.delete')
-                                                <form action="{{ route('roles.destroy', $role->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir esta função?')">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            @endcan
+                                            <span class="badge {{ $role->active ? 'bg-success' : 'bg-danger' }}">
+                                                {{ $role->active ? 'Active' : 'Inactive' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if(auth()->user()->hasPermission('manage_roles'))
+                                                <div class="btn-group">
+                                                    <a href="{{ route('roles.edit', $role) }}" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form action="{{ route('roles.toggle-status', $role) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm {{ $role->active ? 'btn-warning' : 'btn-success' }}">
+                                                            <i class="fas {{ $role->active ? 'fa-ban' : 'fa-check' }}"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form action="{{ route('roles.destroy', $role) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach

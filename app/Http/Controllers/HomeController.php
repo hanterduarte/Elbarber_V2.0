@@ -10,47 +10,56 @@ use App\Models\Product;
 use App\Models\Service;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
     public function __construct()
     {
-        // Removido o middleware auth pois já está sendo aplicado nas rotas
+        $this->middleware('auth');
     }
 
     public function index()
     {
-        // Obtém as estatísticas do dia
-        $today = Carbon::today();
-        
-        $todayAppointments = Appointment::whereDate('start_time', $today)->count();
-        $todaySales = Sale::whereDate('created_at', $today)->count();
-        $todayRevenue = Sale::whereDate('created_at', $today)->sum('final_total');
-        
-        // Obtém os próximos agendamentos
-        $upcomingAppointments = Appointment::with(['client', 'barber'])
+        try {
+            // Obtém as estatísticas do dia
+            $today = Carbon::today();
+            
+            $todayAppointments = Appointment::whereDate('start_time', $today)->count();
+            $todaySales = Sale::whereDate('created_at', $today)->count();
+            $todayRevenue = Sale::whereDate('created_at', $today)->sum('final_total');
+            
+            // Obtém os próximos agendamentos com todos os relacionamentos necessários
+            $upcomingAppointments = Appointment::with([
+                'client:id,name',
+                'barber:id,name',
+                'services:id,name'
+            ])
             ->where('start_time', '>=', $today)
             ->where('status', 'scheduled')
             ->orderBy('start_time')
             ->take(5)
             ->get();
-        
-        // Obtém os produtos com estoque baixo (menos de 5 unidades)
-        $lowStockProducts = Product::where('stock', '<=', 5)
-            ->orderBy('stock')
-            ->take(5)
-            ->get();
-        
-        // Obtém o total de clientes
-        $totalClients = Client::count();
-        
-        return view('dashboard', compact(
-            'todayAppointments',
-            'todaySales',
-            'todayRevenue',
-            'upcomingAppointments',
-            'lowStockProducts',
-            'totalClients'
-        ));
+            
+            // Obtém os produtos com estoque baixo
+            $lowStockProducts = Product::where('stock', '<=', 5)
+                ->orderBy('stock')
+                ->take(5)
+                ->get();
+            
+            // Obtém o total de clientes
+            $totalClients = Client::count();
+            
+            return view('dashboard', compact(
+                'todayAppointments',
+                'todaySales',
+                'todayRevenue',
+                'upcomingAppointments',
+                'lowStockProducts',
+                'totalClients'
+            ));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao carregar o dashboard: ' . $e->getMessage());
+        }
     }
 } 

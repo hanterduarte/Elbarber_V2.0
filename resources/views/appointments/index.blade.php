@@ -2,15 +2,11 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col">
-            <h2>Agendamentos</h2>
-        </div>
-        <div class="col text-end">
-            <a href="{{ route('appointments.create') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Novo Agendamento
-            </a>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Agendamentos</h1>
+        <a href="{{ route('appointments.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Novo Agendamento
+        </a>
     </div>
 
     <div class="card">
@@ -19,77 +15,79 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
+                            <th>Data/Hora</th>
                             <th>Cliente</th>
                             <th>Barbeiro</th>
-                            <th>Serviço</th>
-                            <th>Data/Hora</th>
-                            <th>Status</th>
-                            <th>Ações</th>
+                            <th>Serviços</th>
+                            <th class="text-center">Duração</th>
+                            <th class="text-end">Valor</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($appointments as $appointment)
                             <tr>
-                                <td>{{ $appointment->client->name }}</td>
-                                <td>{{ $appointment->barber->name }}</td>
-                                <td>{{ $appointment->service->name }}</td>
                                 <td>{{ $appointment->start_time->format('d/m/Y H:i') }}</td>
+                                <td>{{ $appointment->client->name }}</td>
+                                <td>{{ $appointment->barber->user->name }}</td>
                                 <td>
-                                    @switch($appointment->status)
-                                        @case('pending')
-                                            <span class="badge bg-warning">Pendente</span>
-                                            @break
-                                        @case('confirmed')
-                                            <span class="badge bg-info">Confirmado</span>
-                                            @break
-                                        @case('completed')
-                                            <span class="badge bg-success">Concluído</span>
-                                            @break
-                                        @case('cancelled')
-                                            <span class="badge bg-danger">Cancelado</span>
-                                            @break
-                                    @endswitch
+                                    @foreach($appointment->services as $service)
+                                        <span class="badge bg-info">{{ $service->name }}</span>
+                                    @endforeach
                                 </td>
-                                <td>
+                                <td class="text-center">{{ $appointment->duration }} min</td>
+                                <td class="text-end">R$ {{ number_format($appointment->total, 2, ',', '.') }}</td>
+                                <td class="text-center">
+                                    @php
+                                        $statusClasses = [
+                                            'scheduled' => 'bg-primary',
+                                            'confirmed' => 'bg-info',
+                                            'completed' => 'bg-success',
+                                            'cancelled' => 'bg-danger'
+                                        ];
+                                        $statusLabels = [
+                                            'scheduled' => 'Agendado',
+                                            'confirmed' => 'Confirmado',
+                                            'completed' => 'Concluído',
+                                            'cancelled' => 'Cancelado'
+                                        ];
+                                    @endphp
+                                    <span class="badge {{ $statusClasses[$appointment->status] }}">
+                                        {{ $statusLabels[$appointment->status] }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
                                     <div class="btn-group">
-                                        <a href="{{ route('appointments.edit', $appointment) }}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-pencil"></i>
+                                        <a href="{{ route('appointments.show', $appointment) }}" 
+                                           class="btn btn-sm btn-info" title="Visualizar">
+                                            <i class="fas fa-eye"></i>
                                         </a>
-                                        @if($appointment->status == 'pending')
-                                            <form action="{{ route('appointments.confirm', $appointment) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-info">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                        @if($appointment->status == 'confirmed')
-                                            <form action="{{ route('appointments.complete', $appointment) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-success">
-                                                    <i class="bi bi-check2-all"></i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                        @if(in_array($appointment->status, ['pending', 'confirmed']))
-                                            <form action="{{ route('appointments.cancel', $appointment) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-danger">
-                                                    <i class="bi bi-x-circle"></i>
-                                                </button>
-                                            </form>
-                                        @endif
+                                        <a href="{{ route('appointments.edit', $appointment) }}" 
+                                           class="btn btn-sm btn-primary" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('appointments.destroy', $appointment) }}" 
+                                              method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" 
+                                                    title="Excluir" onclick="return confirm('Tem certeza?')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center">Nenhum agendamento encontrado.</td>
+                                <td colspan="8" class="text-center">Nenhum agendamento encontrado.</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+            {{ $appointments->links() }}
         </div>
     </div>
 </div>
