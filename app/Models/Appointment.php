@@ -44,6 +44,14 @@ class Appointment extends Model
             ->withTimestamps();
     }
 
+    public function service()
+    {
+        return $this->belongsToMany(Service::class, 'appointment_service')
+            ->withPivot('price')
+            ->withTimestamps()
+            ->first();
+    }
+
     public function sale()
     {
         return $this->hasOne(Sale::class);
