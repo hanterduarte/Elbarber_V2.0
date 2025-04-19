@@ -10,67 +10,61 @@ class RoleSeeder extends Seeder
 {
     public function run()
     {
-        // Get all permissions
-        $permissions = Permission::all();
-
-        // Create Admin role with all permissions
+        // Criar papéis
         $admin = Role::firstOrCreate(
             ['name' => 'admin'],
             [
-                'description' => 'System Administrator',
-                'active' => true,
+                'description' => 'Administrador do sistema',
+                'is_active' => true
             ]
         );
-        $admin->permissions()->sync($permissions->pluck('id'));
 
-        // Create Manager role with specific permissions
         $manager = Role::firstOrCreate(
             ['name' => 'manager'],
             [
-                'description' => 'Business Manager',
-                'active' => true,
+                'description' => 'Gerente da barbearia',
+                'is_active' => true
             ]
         );
-        $managerPermissions = $permissions->whereIn('module', [
-            'clients',
-            'services',
-            'products',
-            'sales',
-            'cash_register',
-            'reports',
-            'appointments'
-        ]);
-        $manager->permissions()->sync($managerPermissions->pluck('id'));
 
-        // Create Barber role with specific permissions
         $barber = Role::firstOrCreate(
             ['name' => 'barber'],
             [
-                'description' => 'Barber',
-                'active' => true,
+                'description' => 'Barbeiro',
+                'is_active' => true
             ]
         );
-        $barberPermissions = $permissions->whereIn('module', [
-            'clients',
-            'services',
-            'appointments'
-        ]);
-        $barber->permissions()->sync($barberPermissions->pluck('id'));
 
-        // Create Receptionist role with specific permissions
         $receptionist = Role::firstOrCreate(
             ['name' => 'receptionist'],
             [
-                'description' => 'Receptionist',
-                'active' => true,
+                'description' => 'Recepcionista',
+                'is_active' => true
             ]
         );
-        $receptionistPermissions = $permissions->whereIn('module', [
-            'clients',
-            'appointments',
-            'sales',
-            'cash_register'
-        ]);
+
+        // Obter todas as permissões
+        $permissions = Permission::all();
+
+        // Atribuir todas as permissões ao admin
+        $admin->permissions()->sync($permissions->pluck('id'));
+
+        // Atribuir permissões ao gerente
+        $managerPermissions = $permissions->filter(function ($permission) {
+            return !in_array($permission->module, ['Users', 'Roles', 'Permissions']);
+        });
+        $manager->permissions()->sync($managerPermissions->pluck('id'));
+
+        // Atribuir permissões ao barbeiro
+        $barberPermissions = $permissions->filter(function ($permission) {
+            return in_array($permission->module, ['Appointments', 'Clients', 'Services', 'Sales']);
+        });
+        $barber->permissions()->sync($barberPermissions->pluck('id'));
+
+        // Atribuir permissões ao recepcionista
+        $receptionistPermissions = $permissions->filter(function ($permission) {
+            return in_array($permission->module, ['Appointments', 'Clients', 'Sales', 'CashRegister']);
+        });
         $receptionist->permissions()->sync($receptionistPermissions->pluck('id'));
     }
 } 

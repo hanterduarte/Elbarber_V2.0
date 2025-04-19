@@ -97,7 +97,7 @@
                                         <td>{{ $appointment->client->name }}</td>
                                         <td>
                                             @foreach($appointment->services as $service)
-                                                {{ $service->name }}@if(!$loop->last), @endif
+                                                {{ $service->name }}<br>
                                             @endforeach
                                         </td>
                                         <td>{{ $appointment->start_time->format('d/m/Y H:i') }}</td>

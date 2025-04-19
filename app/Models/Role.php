@@ -13,11 +13,11 @@ class Role extends Model
     protected $fillable = [
         'name',
         'description',
-        'active',
+        'is_active'
     ];
 
     protected $casts = [
-        'active' => 'boolean',
+        'is_active' => 'boolean'
     ];
 
     public function users()
@@ -28,21 +28,5 @@ class Role extends Model
     public function permissions()
     {
         return $this->belongsToMany(Permission::class, 'role_permissions');
-    }
-
-    public function givePermissionTo($permission)
-    {
-        if (is_string($permission)) {
-            $permission = Permission::whereName($permission)->firstOrFail();
-        }
-        $this->permissions()->syncWithoutDetaching($permission);
-    }
-
-    public function revokePermissionTo($permission)
-    {
-        if (is_string($permission)) {
-            $permission = Permission::whereName($permission)->firstOrFail();
-        }
-        $this->permissions()->detach($permission);
     }
 } 

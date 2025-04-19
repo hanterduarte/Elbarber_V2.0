@@ -14,11 +14,11 @@ class Permission extends Model
         'name',
         'description',
         'module',
-        'active',
+        'is_active'
     ];
 
     protected $casts = [
-        'active' => 'boolean',
+        'is_active' => 'boolean'
     ];
 
     public function roles()

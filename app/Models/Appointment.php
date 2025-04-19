@@ -24,7 +24,7 @@ class Appointment extends Model
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
-        'total' => 'decimal:2',
+        'total' => 'decimal:2'
     ];
 
     public function client()
@@ -34,18 +34,18 @@ class Appointment extends Model
 
     public function barber()
     {
-        return $this->belongsTo(Barber::class);
+        return $this->belongsTo(User::class, 'barber_id');
     }
 
     public function services()
     {
         return $this->belongsToMany(Service::class, 'appointment_service')
-            ->withPivot('price', 'duration')
+            ->withPivot('price')
             ->withTimestamps();
     }
 
-    public function payments()
+    public function sale()
     {
-        return $this->hasManyThrough(SalePayment::class, Sale::class);
+        return $this->hasOne(Sale::class);
     }
 } 

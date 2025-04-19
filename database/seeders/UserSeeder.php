@@ -11,60 +11,52 @@ class UserSeeder extends Seeder
 {
     public function run()
     {
-        // Create admin user
+        // Criar usuário admin
         $admin = User::firstOrCreate(
             ['email' => 'admin@elbarber.com'],
             [
-                'name' => 'Administrator',
+                'name' => 'Administrador',
                 'password' => Hash::make('password'),
-                'active' => true,
+                'phone' => '(11) 99999-9999',
+                'is_active' => true
             ]
         );
+        $admin->roles()->sync([Role::where('name', 'admin')->first()->id]);
 
-        // Assign admin role
-        $adminRole = Role::where('name', 'admin')->first();
-        $admin->roles()->sync([$adminRole->id]);
-
-        // Create manager user
+        // Criar usuário gerente
         $manager = User::firstOrCreate(
             ['email' => 'manager@elbarber.com'],
             [
-                'name' => 'Manager',
+                'name' => 'Gerente',
                 'password' => Hash::make('password'),
-                'active' => true,
+                'phone' => '(11) 99999-9998',
+                'is_active' => true
             ]
         );
+        $manager->roles()->sync([Role::where('name', 'manager')->first()->id]);
 
-        // Assign manager role
-        $managerRole = Role::where('name', 'manager')->first();
-        $manager->roles()->sync([$managerRole->id]);
-
-        // Create barber user
+        // Criar usuário barbeiro
         $barber = User::firstOrCreate(
             ['email' => 'barber@elbarber.com'],
             [
-                'name' => 'Barber',
+                'name' => 'Barbeiro',
                 'password' => Hash::make('password'),
-                'active' => true,
+                'phone' => '(11) 99999-9997',
+                'is_active' => true
             ]
         );
+        $barber->roles()->sync([Role::where('name', 'barber')->first()->id]);
 
-        // Assign barber role
-        $barberRole = Role::where('name', 'barber')->first();
-        $barber->roles()->sync([$barberRole->id]);
-
-        // Create receptionist user
+        // Criar usuário recepcionista
         $receptionist = User::firstOrCreate(
             ['email' => 'receptionist@elbarber.com'],
             [
-                'name' => 'Receptionist',
+                'name' => 'Recepcionista',
                 'password' => Hash::make('password'),
-                'active' => true,
+                'phone' => '(11) 99999-9996',
+                'is_active' => true
             ]
         );
-
-        // Assign receptionist role
-        $receptionistRole = Role::where('name', 'receptionist')->first();
-        $receptionist->roles()->sync([$receptionistRole->id]);
+        $receptionist->roles()->sync([Role::where('name', 'receptionist')->first()->id]);
     }
 } 

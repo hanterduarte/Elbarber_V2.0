@@ -5,18 +5,18 @@
     <div class="row justify-content-center">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Users</h5>
-                    @if(auth()->user()->hasPermission('manage_users'))
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">Usuários</h3>
                         <a href="{{ route('users.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> New User
+                            Novo Usuário
                         </a>
-                    @endif
+                    </div>
                 </div>
 
                 <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">
+                    @if (session('success'))
+                        <div class="alert alert-success" role="alert">
                             {{ session('success') }}
                         </div>
                     @endif
@@ -25,15 +25,16 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
+                                    <th>Nome</th>
                                     <th>Email</th>
-                                    <th>Roles</th>
+                                    <th>Funções</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th>Data de Cadastro</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($users as $user)
+                                @forelse($users as $user)
                                     <tr>
                                         <td>{{ $user->name }}</td>
                                         <td>{{ $user->email }}</td>
@@ -43,36 +44,43 @@
                                             @endforeach
                                         </td>
                                         <td>
-                                            <span class="badge {{ $user->active ? 'bg-success' : 'bg-danger' }}">
-                                                {{ $user->active ? 'Active' : 'Inactive' }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            @if(auth()->user()->hasPermission('manage_users'))
-                                                <div class="btn-group">
-                                                    <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <form action="{{ route('users.toggle-status', $user) }}" method="POST" class="d-inline">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm {{ $user->active ? 'btn-warning' : 'btn-success' }}">
-                                                            <i class="fas {{ $user->active ? 'fa-ban' : 'fa-check' }}"></i>
-                                                        </button>
-                                                    </form>
-                                                    <form action="{{ route('users.destroy', $user) }}" method="POST" class="d-inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                </div>
+                                            @if($user->is_active)
+                                                <span class="badge bg-success">Ativo</span>
+                                            @else
+                                                <span class="badge bg-danger">Inativo</span>
                                             @endif
                                         </td>
+                                        <td>{{ $user->created_at->format('d/m/Y') }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ route('users.edit', $user) }}" 
+                                                   class="btn btn-primary btn-sm">
+                                                    Editar
+                                                </a>
+                                                <form action="{{ route('users.destroy', $user) }}" 
+                                                      method="POST" 
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Tem certeza que deseja excluir este usuário?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger btn-sm">
+                                                        Excluir
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center">Nenhum usuário cadastrado.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="d-flex justify-content-center">
+                        {{ $users->links() }}
                     </div>
                 </div>
             </div>

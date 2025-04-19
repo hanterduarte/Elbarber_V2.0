@@ -12,39 +12,39 @@ class ServiceSeeder extends Seeder
         $services = [
             [
                 'name' => 'Corte de Cabelo',
-                'description' => 'Corte tradicional masculino',
-                'price' => 35.00,
+                'description' => 'Corte de cabelo tradicional',
+                'price' => 30.00,
                 'duration' => 30,
-                'is_active' => true,
+                'is_active' => true
             ],
             [
                 'name' => 'Barba',
-                'description' => 'Barba com toalha quente',
+                'description' => 'Aparar e modelar barba',
                 'price' => 25.00,
-                'duration' => 30,
-                'is_active' => true,
+                'duration' => 20,
+                'is_active' => true
             ],
             [
                 'name' => 'Corte + Barba',
-                'description' => 'Corte e barba completo',
-                'price' => 55.00,
-                'duration' => 60,
-                'is_active' => true,
+                'description' => 'Corte de cabelo e barba',
+                'price' => 50.00,
+                'duration' => 50,
+                'is_active' => true
+            ],
+            [
+                'name' => 'Sobrancelha',
+                'description' => 'Design de sobrancelha',
+                'price' => 15.00,
+                'duration' => 15,
+                'is_active' => true
             ],
             [
                 'name' => 'Pigmentação',
-                'description' => 'Pigmentação de barba ou cabelo',
-                'price' => 45.00,
-                'duration' => 45,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Hidratação',
-                'description' => 'Hidratação capilar',
-                'price' => 40.00,
-                'duration' => 30,
-                'is_active' => true,
-            ],
+                'description' => 'Pigmentação de barba',
+                'price' => 80.00,
+                'duration' => 60,
+                'is_active' => true
+            ]
         ];
 
         foreach ($services as $service) {

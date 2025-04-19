@@ -4,243 +4,153 @@ namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\Client;
 use App\Models\PaymentMethod;
-use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class SaleController extends Controller
 {
     public function index()
     {
-        $sales = Sale::with(['client', 'products', 'payments.paymentMethod'])->get();
-        return view('sales.index', compact('sales'));
+        try {
+            $sales = Sale::with(['client', 'user', 'items', 'payments'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+            
+            return view('sales.index', compact('sales'));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao carregar vendas: ' . $e->getMessage());
+        }
     }
 
     public function create()
     {
-        $products = Product::all();
-        $clients = Client::all();
-        $paymentMethods = PaymentMethod::all();
-        return view('sales.create', compact('products', 'clients', 'paymentMethods'));
+        try {
+            $clients = Client::where('is_active', true)->get();
+            $products = Product::where('is_active', true)->get();
+            $services = Service::where('is_active', true)->get();
+            $paymentMethods = PaymentMethod::where('is_active', true)->get();
+            
+            return view('sales.create', compact('clients', 'products', 'services', 'paymentMethods'));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao carregar dados: ' . $e->getMessage());
+        }
     }
 
     public function store(Request $request)
     {
         try {
+            DB::beginTransaction();
+
             $validated = $request->validate([
                 'client_id' => 'required|exists:clients,id',
-                'payments' => 'required|array',
-                'payments.*.payment_method_id' => 'required|exists:payment_methods,id',
-                'payments.*.amount' => 'required|numeric|min:0',
-                'products' => 'required|array',
-                'products.*.id' => 'required|exists:products,id',
-                'products.*.quantity' => 'required|integer|min:1',
+                'items' => 'required|array|min:1',
+                'items.*.type' => 'required|in:product,service',
+                'items.*.id' => 'required|integer',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.price' => 'required|numeric|min:0',
+                'items.*.discount' => 'nullable|numeric|min:0',
+                'payment_methods' => 'required|array|min:1',
+                'payment_methods.*.id' => 'required|exists:payment_methods,id',
+                'payment_methods.*.amount' => 'required|numeric|min:0',
                 'notes' => 'nullable|string',
             ]);
 
-            // Iniciar transação
-            DB::beginTransaction();
-
-            // Calcular total dos produtos
-            $total = 0;
-            $productItems = [];
-
-            foreach ($validated['products'] as $product) {
-                $productModel = Product::findOrFail($product['id']);
-                
-                // Verificar estoque
-                if ($productModel->stock < $product['quantity']) {
-                    throw new \Exception("Estoque insuficiente para o produto: {$productModel->name}");
-                }
-
-                $quantity = $product['quantity'];
-                $price = $productModel->price;
-                $subtotal = $price * $quantity;
-
-                $productItems[] = [
-                    'id' => $product['id'],
-                    'quantity' => $quantity,
-                    'price' => $price,
-                    'total' => $subtotal
-                ];
-
-                $total += $subtotal;
-            }
-
-            // Validar total dos pagamentos
-            $totalPayments = array_reduce($validated['payments'], function($carry, $payment) {
-                return $carry + $payment['amount'];
-            }, 0);
-
-            if (abs($totalPayments - $total) > 0.01) {
-                throw new \Exception('O total dos pagamentos não corresponde ao valor final da venda.');
-            }
-
-            // Criar a venda
             $sale = Sale::create([
                 'client_id' => $validated['client_id'],
-                'total' => $total,
-                'final_total' => $total,
+                'user_id' => auth()->id(),
+                'total' => 0,
+                'subtotal' => 0,
+                'discount' => 0,
                 'notes' => $validated['notes'] ?? null,
-                'status' => 'completed'
             ]);
 
-            // Registrar os pagamentos
-            foreach ($validated['payments'] as $payment) {
-                $sale->payments()->create([
-                    'payment_method_id' => $payment['payment_method_id'],
-                    'amount' => $payment['amount']
-                ]);
-            }
+            $total = 0;
+            foreach ($validated['items'] as $item) {
+                if ($item['type'] === 'product') {
+                    $product = Product::findOrFail($item['id']);
+                    if ($product->stock < $item['quantity']) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Produto ' . $product->name . ' não possui estoque suficiente.'
+                        ]);
+                    }
+                    $product->decrement('stock', $item['quantity']);
+                }
 
-            // Registrar os produtos
-            foreach ($productItems as $item) {
-                $sale->products()->attach($item['id'], [
+                $sale->items()->create([
+                    'itemable_type' => $item['type'] === 'product' ? Product::class : Service::class,
+                    'itemable_id' => $item['id'],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
-                    'total' => $item['total']
+                    'discount' => $item['discount'] ?? 0,
                 ]);
 
-                // Atualizar estoque
-                Product::find($item['id'])->decrement('stock', $item['quantity']);
+                $total += ($item['price'] * $item['quantity']) - ($item['discount'] ?? 0);
+            }
+
+            $sale->update([
+                'total' => $total,
+                'subtotal' => $total,
+            ]);
+
+            foreach ($validated['payment_methods'] as $payment) {
+                $sale->payments()->create([
+                    'payment_method_id' => $payment['id'],
+                    'amount' => $payment['amount'],
+                ]);
             }
 
             DB::commit();
+            return redirect()->route('sales.show', $sale)->with('success', 'Venda criada com sucesso!');
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Venda registrada com sucesso!',
-                'redirect' => route('sales.index')
-            ]);
-
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            Log::error('Erro ao registrar venda', [
-                'error' => $e->getMessage(),
-                'data' => $request->all()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage() ?: 'Erro ao registrar venda. Por favor, tente novamente.'
-            ], 422);
+            return redirect()->back()->with('error', 'Erro ao criar venda: ' . $e->getMessage())->withInput();
         }
     }
 
-    public function edit(Sale $sale)
-    {
-        $products = Product::all();
-        $clients = Client::all();
-        $paymentMethods = PaymentMethod::all();
-        return view('sales.edit', compact('sale', 'products', 'clients', 'paymentMethods'));
-    }
-
-    public function update(Request $request, Sale $sale)
+    public function show(Sale $sale)
     {
         try {
-            $validated = $request->validate([
-                'client_id' => 'required|exists:clients,id',
-                'payments' => 'required|array',
-                'payments.*.payment_method_id' => 'required|exists:payment_methods,id',
-                'payments.*.amount' => 'required|numeric|min:0',
-                'products' => 'required|array',
-                'products.*.id' => 'required|exists:products,id',
-                'products.*.quantity' => 'required|integer|min:1',
-                'notes' => 'nullable|string'
-            ]);
+            $sale->load(['client', 'user', 'items.itemable', 'payments.paymentMethod']);
+            return view('sales.show', compact('sale'));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao carregar venda: ' . $e->getMessage());
+        }
+    }
+
+    public function cancel(Sale $sale)
+    {
+        try {
+            if ($sale->status === 'cancelled') {
+                return redirect()->back()->with('error', 'Esta venda já está cancelada.');
+            }
 
             DB::beginTransaction();
 
-            // Restaurar o estoque dos produtos antigos
-            foreach ($sale->products as $product) {
-                $product->increment('stock', $product->pivot->quantity);
+            foreach ($sale->items as $item) {
+                if ($item->itemable_type === Product::class) {
+                    $product = Product::find($item->itemable_id);
+                    if ($product) {
+                        $product->increment('stock', $item->quantity);
+                    }
+                }
             }
 
-            // Remover produtos e pagamentos antigos
-            $sale->products()->detach();
-            $sale->payments()->delete();
-
-            // Calcular total dos produtos
-            $total = 0;
-            foreach ($validated['products'] as $product) {
-                $productModel = Product::findOrFail($product['id']);
-                $quantity = $product['quantity'];
-                $price = $productModel->price;
-                $subtotal = $price * $quantity;
-
-                $sale->products()->attach($product['id'], [
-                    'quantity' => $quantity,
-                    'price' => $price,
-                    'total' => $subtotal
-                ]);
-
-                $total += $subtotal;
-                $productModel->decrement('stock', $quantity);
-            }
-
-            // Validar total dos pagamentos
-            $totalPayments = array_reduce($validated['payments'], function($carry, $payment) {
-                return $carry + $payment['amount'];
-            }, 0);
-
-            if (abs($totalPayments - $total) > 0.01) {
-                throw new \Exception('O total dos pagamentos não corresponde ao valor final da venda.');
-            }
-
-            // Atualizar a venda
-            $sale->update([
-                'client_id' => $validated['client_id'],
-                'total' => $total,
-                'final_total' => $total,
-                'notes' => $validated['notes'] ?? null
-            ]);
-
-            // Registrar os novos pagamentos
-            foreach ($validated['payments'] as $payment) {
-                $sale->payments()->create([
-                    'payment_method_id' => $payment['payment_method_id'],
-                    'amount' => $payment['amount']
-                ]);
-            }
-
+            $sale->update(['status' => 'cancelled']);
+            
             DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Venda atualizada com sucesso!',
-                'redirect' => route('sales.index')
-            ]);
+            return redirect()->route('sales.show', $sale)->with('success', 'Venda cancelada com sucesso!');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            Log::error('Erro ao atualizar venda', [
-                'error' => $e->getMessage(),
-                'data' => $request->all()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage() ?: 'Erro ao atualizar venda. Por favor, tente novamente.'
-            ], 422);
+            return redirect()->back()->with('error', 'Erro ao cancelar venda: ' . $e->getMessage());
         }
-    }
-
-    public function destroy(Sale $sale)
-    {
-        // Restaurar o estoque dos produtos
-        foreach ($sale->products as $product) {
-            $product->increment('stock', $product->pivot->quantity);
-        }
-
-        $sale->products()->detach();
-        $sale->delete();
-
-        return redirect()->route('sales.index')
-            ->with('success', 'Venda excluída com sucesso!');
     }
 } 

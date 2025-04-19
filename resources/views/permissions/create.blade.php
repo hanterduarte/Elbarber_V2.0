@@ -6,57 +6,31 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Create Permission</h5>
+                    <h3 class="mb-0">Criar Nova Permissão</h3>
                 </div>
 
                 <div class="card-body">
-                    <form action="{{ route('permissions.store') }}" method="POST">
+                    <form method="POST" action="{{ route('permissions.store') }}">
                         @csrf
 
                         <div class="mb-3">
-                            <label for="name" class="form-label">Name</label>
-                            <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name') }}" required>
+                            <label for="name" class="form-label">Nome da Permissão</label>
+                            <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name') }}" required autofocus>
+                            
                             @error('name')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
                             @enderror
                         </div>
 
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <input type="text" class="form-control @error('description') is-invalid @enderror" id="description" name="description" value="{{ old('description') }}" required>
-                            @error('description')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="module" class="form-label">Module</label>
-                            <select class="form-select @error('module') is-invalid @enderror" id="module" name="module" required>
-                                <option value="">Select a module</option>
-                                <option value="users" {{ old('module') == 'users' ? 'selected' : '' }}>Users</option>
-                                <option value="roles" {{ old('module') == 'roles' ? 'selected' : '' }}>Roles</option>
-                                <option value="permissions" {{ old('module') == 'permissions' ? 'selected' : '' }}>Permissions</option>
-                                <option value="appointments" {{ old('module') == 'appointments' ? 'selected' : '' }}>Appointments</option>
-                                <option value="services" {{ old('module') == 'services' ? 'selected' : '' }}>Services</option>
-                            </select>
-                            @error('module')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('permissions.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </a>
+                        <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Create Permission
+                                <i class="fas fa-save"></i> Salvar
                             </button>
+                            <a href="{{ route('permissions.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
                         </div>
                     </form>
                 </div>

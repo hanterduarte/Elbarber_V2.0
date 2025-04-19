@@ -22,11 +22,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
-        });
-
-        // Add barbershop_id to barbers table
-        Schema::table('barbers', function (Blueprint $table) {
-            $table->foreignId('barbershop_id')->nullable()->after('id')->constrained()->nullOnDelete();
+            
+            // Índices
+            $table->index('name');
+            $table->index('cnpj');
+            $table->index('is_active');
         });
     }
 
@@ -35,11 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('barbers', function (Blueprint $table) {
-            $table->dropForeign(['barbershop_id']);
-            $table->dropColumn('barbershop_id');
-        });
-        
         Schema::dropIfExists('barbershops');
     }
-}; 
+};

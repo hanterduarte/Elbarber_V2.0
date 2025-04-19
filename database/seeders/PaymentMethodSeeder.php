@@ -7,7 +7,7 @@ use App\Models\PaymentMethod;
 
 class PaymentMethodSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
         $paymentMethods = [
             [
@@ -28,6 +28,11 @@ class PaymentMethodSeeder extends Seeder
             [
                 'name' => 'PIX',
                 'description' => 'Pagamento via PIX',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Transferência Bancária',
+                'description' => 'Pagamento via transferência bancária',
                 'is_active' => true,
             ],
         ];

@@ -13,15 +13,13 @@ class Barber extends Model
     protected $fillable = [
         'user_id',
         'barbershop_id',
-        'name',
-        'email',
-        'phone',
-        'specialties',
+        'specialty',
+        'bio',
+        'photo',
         'is_active'
     ];
 
     protected $casts = [
-        'specialties' => 'array',
         'is_active' => 'boolean'
     ];
 
